@@ -1,0 +1,381 @@
+openapi: 3.0.3
+info:
+  title: SmartDine API
+  version: 1.0.0
+  description: API per gestionar clients i empreses del sistema SmartDine
+
+servers:
+  - url: /smartDine/api
+
+paths:
+
+  /users/clients:
+    get:
+      summary: Llistar o cercar clients
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Filtra per nom de client
+      responses:
+        '200':
+          description: Clients trobats
+        '204':
+          description: Cap client trobat
+        '500':
+          description: Error del servidor
+
+    post:
+      summary: Registrar un nou client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        '201':
+          description: Client creat
+        '400':
+          description: Dades incorrectes
+        '409':
+          description: Client ja registrat
+        '500':
+          description: Error del servidor
+
+  /users/clients/{clientId}:
+    put:
+      summary: Actualitzar dades d’un client
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: Client actualitzat
+        '400':
+          description: Dades incorrectes
+        '401':
+          description: No autoritzat
+        '404':
+          description: Client no trobat
+        '409':
+          description: Email o telèfon ja utilitzat
+        '500':
+          description: Error del servidor
+
+    delete:
+      summary: Eliminar un client
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Client eliminat
+        '401':
+          description: No autoritzat
+        '404':
+          description: Client no trobat
+        '500':
+          description: Error del servidor
+
+  /users/businesses:
+    get:
+      summary: Llistar o cercar empreses
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Filtra per nom de l’empresa
+      responses:
+        '200':
+          description: Empreses trobades
+        '204':
+          description: Cap empresa trobada
+        '500':
+          description: Error del servidor
+
+    post:
+      summary: Registrar una nova empresa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        '201':
+          description: Empresa creada
+        '400':
+          description: Dades incorrectes
+        '409':
+          description: Empresa ja registrada
+        '500':
+          description: Error del servidor
+
+  /users/businesses/{businessId}:
+    put:
+      summary: Actualitzar dades d’una empresa
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: businessId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: Empresa actualitzada
+        '400':
+          description: Dades incorrectes
+        '401':
+          description: No autoritzat
+        '404':
+          description: Empresa no trobada
+        '409':
+          description: Email o telèfon ja utilitzat
+        '500':
+          description: Error del servidor
+
+    delete:
+      summary: Eliminar una empresa
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: businessId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Empresa eliminada
+        '401':
+          description: No autoritzat
+        '404':
+          description: Empresa no trobada
+        '500':
+          description: Error del servidor
+  /restaurants:
+    get:
+      summary: Llista tots els restaurants
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: address
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: global_calification
+          in: query
+          required: false
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Llista de restaurants retornada
+        '204':
+          description: Cap restaurant disponible
+
+  /restaurants/{restaurant_id}:
+    get:
+      summary: Detalls d’un restaurant
+      parameters:
+        - name: restaurant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Informació del restaurant
+        '404':
+          description: Restaurant no trobat
+
+  /businesses/{business_id}/restaurants:
+    get:
+      summary: Restaurants d’una empresa
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Llista de restaurants de l’empresa
+        '403':
+          description: Accés denegat
+        '404':
+          description: Empresa no trobada
+
+    post:
+      summary: Crear un restaurant
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                location:
+                  type: string
+                category:
+                  type: string
+                address:
+                  type: string
+      responses:
+        '201':
+          description: Restaurant creat
+        '400':
+          description: Error de validació
+        '403':
+          description: No autoritzat
+
+  /businesses/{business_id}/restaurants/{restaurant_id}:
+    put:
+      summary: Actualitzar un restaurant
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: restaurant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                location:
+                  type: string
+                category:
+                  type: string
+                address:
+                  type: string
+      responses:
+        '200':
+          description: Actualitzat amb èxit
+        '400':
+          description: Error en les dades
+        '403':
+          description: Sense permisos
+        '404':
+          description: Restaurant no trobat
+
+    delete:
+      summary: Eliminar un restaurant
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: restaurant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Restaurant eliminat
+        '403':
+          description: No autoritzat
+        '404':
+          description: No trobat    
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
