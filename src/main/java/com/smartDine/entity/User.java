@@ -9,15 +9,20 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "users")
-public class User implements UserDetails {
+@Inheritance(strategy = InheritanceType.JOINED)
+public abstract class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_seq")
     @SequenceGenerator(name = "users_seq", sequenceName = "users_id_seq", allocationSize = 1)
@@ -26,24 +31,26 @@ public class User implements UserDetails {
     
     @Column(nullable = false)
     private String name;
-    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role; // We'll use this to easily identify the user type for security rules
     @Column(unique = true, nullable = false)
     private String email;
     
     @Column(length = 255, nullable = false)
     private String password;
     
-    @Column(unique = true, nullable = false)
-    private Long number;
+    @Column(unique = true, nullable = false , name="phone_number")
+    private Long phoneNumber;
 
     // Constructors
     public User() {}
 
-    public User(String name, String email, String password, Long number) {
+    public User(String name, String email, String password, Long phoneNumber) {
         this.name = name;
         this.email = email;
         this.password = password;
-        this.number = number;
+        this.phoneNumber= phoneNumber; 
     }
 
     // Getters and setters
@@ -59,9 +66,24 @@ public class User implements UserDetails {
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
     
-    public Long getNumber() { return number; }
-    public void setNumber(Long number) { this.number = number; }
-
+    public Long getPhoneNumber() { return this.phoneNumber; } 
+    public void setPhoneNumber(Long phoneNumber) { this.phoneNumber = phoneNumber; }
+    public Role getRole() { return role; }
+    public void setRole(String role) {
+        switch (role.toLowerCase()) {
+            case "customer":
+                this.role = Role.ROLE_CUSTOMER;
+                break;
+            case "business":
+                this.role = Role.ROLE_BUSINESS;
+                break;
+            case "admin":
+                this.role = Role.ROLE_ADMIN;
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid role: " + role);
+        }
+    }
     // UserDetails implementation
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

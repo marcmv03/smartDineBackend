@@ -8,61 +8,16 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.smartDine.entity.Customer;
-import com.smartDine.repository.CustomersRepository;
+import com.smartDine.repository.CustomerRepository;
 
 @Service
-public class CustomersService {
+public class CustomerService  {
 
     @Autowired
-    private CustomersRepository clientsRepository;
+    private CustomerRepository clientsRepository;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    /**
-     * Registers a new client.
-     *
-     * @param name   The client's name.
-     * @param number The client's phone number.
-     * @param email  The client's email address.
-     * @param password The client's password.
-     * @return The created client object.
-     * @throws IllegalArgumentException if a client with the same email or phone number already exists.
-     */
-    public Customer createClient(String name, String email, String password, Long number) {
-        // Acceptance criteria: The system must verify that no user with the same name, email, or phone number exists.
-        // Scenario 2 and 3: Error for already registered email or phone number.
-        Optional<Customer> existingClient = clientsRepository.findByEmailOrNumber(email, number);
-        if (existingClient.isPresent()) {
-            throw new IllegalArgumentException("Ya existe un cliente con este correo electrónico o número de teléfono.");
-        }
-        
-        // Encrypt password before saving
-        String encryptedPassword = passwordEncoder.encode(password);
-        Customer newClient = new Customer(name, email, encryptedPassword, number);
-        return clientsRepository.save(newClient);
-    }
-
-    /**
-     * Authenticates a client with email and password.
-     *
-     * @param email The client's email.
-     * @param password The client's password.
-     * @return The authenticated client.
-     * @throws IllegalArgumentException if credentials are invalid.
-     */
-    public Customer authenticateClient(String email, String password) {
-        Optional<Customer> clientOpt = clientsRepository.findByEmail(email);
-        if (clientOpt.isEmpty()) {
-            throw new IllegalArgumentException("Credenciales inválidas.");
-        }
-
-        Customer client = clientOpt.get();
-        if (!passwordEncoder.matches(password, client.getPassword())) {
-            throw new IllegalArgumentException("Credenciales inválidas.");
-        }
-
-        return client;
-    }
 
     /**
      * Updates a client's password.
@@ -82,6 +37,10 @@ public class CustomersService {
 
         client.setPassword(passwordEncoder.encode(newPassword));
         clientsRepository.save(client);
+    }
+    public Customer getCustomerById(Long id) {
+        return clientsRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found with id: " + id));
     }
 
     /**
@@ -105,14 +64,14 @@ public class CustomersService {
             throw new IllegalArgumentException("El correo electrónico ya está en uso.");
         }
 
-        Optional<Customer> existingNumber = clientsRepository.findByNumber(number);
+        Optional<Customer> existingNumber = clientsRepository.findByPhoneNumber(number);
         if (existingNumber.isPresent() && !existingNumber.get().getId().equals(clientId)) {
             throw new IllegalArgumentException("El número de teléfono ya está en uso.");
         }
 
         // Update client data.
         if (name != null) clientToUpdate.setName(name);
-        if (number != null) clientToUpdate.setNumber(number);
+        if (number != null) clientToUpdate.setPhoneNumber(number);
         if (email != null) clientToUpdate.setEmail(email);
 
         return clientsRepository.save(clientToUpdate);

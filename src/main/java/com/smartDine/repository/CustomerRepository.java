@@ -8,11 +8,11 @@ import org.springframework.stereotype.Repository;
 import com.smartDine.entity.Customer;
 
 @Repository
-public interface  CustomersRepository extends  JpaRepository<Customer,Integer> {
+public interface  CustomerRepository extends  JpaRepository<Customer,Integer> {
     Optional<Customer> findById(Long id);
-    Optional<Customer> findByNumber(Long number);
+    Optional<Customer> findByPhoneNumber(Long number);
      List<Customer> findByNameContainingIgnoreCase(String name);
-    Optional<Customer> findByEmailOrNumber(String email, Long number);
+    Optional<Customer> findByEmailOrPhoneNumber(String email, Long number);
     Optional<Customer> findByEmail(String mail );
 
 }
