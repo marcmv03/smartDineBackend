@@ -8,10 +8,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.smartDine.dto.LoginUserDTO;
-import com.smartDine.dto.RegisterUserDTO;
+import com.smartDine.dto.auth.LoginRequest;
+import com.smartDine.dto.auth.RegisterBusinessRequest;
+import com.smartDine.dto.auth.RegisterCustomerRequest;
 import com.smartDine.entity.User;
-import com.smartDine.services.AuthService;
+import com.smartDine.services.AuthenticationService;
 import com.smartDine.services.JwtService;
 
 import jakarta.validation.Valid;
@@ -20,19 +21,19 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/smartdine/api/auth")
 @CrossOrigin(origins = "*")
-public class AuthController {
+public class AuthenticationController {
     private final JwtService jwtService;
-    private final AuthService authService;
+    private final AuthenticationService authService;
 
-    public AuthController(JwtService jwtService, AuthService authService) {
+    public AuthenticationController(JwtService jwtService, AuthenticationService authService) {
         this.jwtService = jwtService;
         this.authService = authService;
     }
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterUserDTO registerUserDto) {
+    @PostMapping("/register/customer")
+    public ResponseEntity<?> registerCustomer(@Valid @RequestBody RegisterCustomerRequest registerCustomerDto) {
         try {
-            User registeredUser = authService.signup(registerUserDto);
+            User registeredUser = authService.registerCustomer(registerCustomerDto);
             String jwtToken = jwtService.generateToken(registeredUser);
             
             return ResponseEntity.ok(new LoginResponse(
@@ -52,7 +53,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticate(@Valid @RequestBody LoginUserDTO loginUserDto) {
+    public ResponseEntity<?> authenticateCustomer(@Valid @RequestBody LoginRequest loginUserDto) {
         try {
             User authenticatedUser = authService.authenticate(loginUserDto);
             String jwtToken = jwtService.generateToken(authenticatedUser);
@@ -68,6 +69,29 @@ public class AuthController {
             return ResponseEntity.badRequest().body(new ErrorResponse("Credenciales inválidas"));
         }
     }
+
+    @PostMapping("/register/business")
+    public ResponseEntity<?> registerBusiness(@Valid @RequestBody RegisterBusinessRequest registerRequest) {
+        try {
+            User registeredUser = authService.registerBusiness(registerRequest);
+            String jwtToken = jwtService.generateToken(registeredUser);
+            
+            return ResponseEntity.ok(new LoginResponse(
+                jwtToken, 
+                jwtService.getExpirationTime(),
+                registeredUser.getId(),
+                registeredUser.getName(),
+                registeredUser.getEmail()
+            ));
+        } catch (DataIntegrityViolationException e) {
+            return ResponseEntity.badRequest().body(
+                new ErrorResponse("Ya existe un usuario con este email o número de teléfono")
+            );
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
 
     // Response classes
     public static class LoginResponse {

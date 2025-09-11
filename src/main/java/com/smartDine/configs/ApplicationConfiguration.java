@@ -11,13 +11,13 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.smartDine.repository.UsersRepository;
+import com.smartDine.repository.UserRepository;
 
 @Configuration
 public class ApplicationConfiguration {
-    private final UsersRepository usersRepository;
+    private final UserRepository usersRepository;
 
-    public ApplicationConfiguration(UsersRepository usersRepository) {
+    public ApplicationConfiguration(UserRepository usersRepository) {
         this.usersRepository = usersRepository;
     }
 

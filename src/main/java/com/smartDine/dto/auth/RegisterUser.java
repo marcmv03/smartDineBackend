@@ -1,10 +1,12 @@
-package com.smartDine.dto;
+package com.smartDine.dto.auth;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-public class RegisterUserDTO {
+public class RegisterUser {
     @NotBlank(message = "El nombre es obligatorio")
     private String name;
     
@@ -16,16 +18,18 @@ public class RegisterUserDTO {
     private String password;
     
     @NotNull(message = "El número de teléfono es obligatorio")
-    private Long phone;
+    @Min(value = 100000000L, message = "El número de teléfono debe tener al menos 9 dígitos")
+    @Max(value = 999999999999L, message = "El número de teléfono no puede tener más de 12 dígitos")
+    private Long phoneNumber;
 
     // Constructors
-    public RegisterUserDTO() {}
+    public RegisterUser() {}
 
-    public RegisterUserDTO(String name, String email, String password, Long phone) {
+    public RegisterUser(String name, String email, String password, Long phoneNumber) {
         this.name = name;
         this.email = email;
         this.password = password;
-        this.phone = phone;
+        this.phoneNumber = phoneNumber;
     }
 
     // Getters and setters
@@ -38,7 +42,7 @@ public class RegisterUserDTO {
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
     
-    public Long getPhone() { return phone; }
-    public void setPhone(Long phone) { this.phone = phone; }
+    public Long getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(Long phone) { this.phoneNumber = phone; }
 
 }

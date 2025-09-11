@@ -1,27 +1,30 @@
-package com.smartDine.dto;
-public class LoginResponseDTO {
+package com.smartDine.dto.auth;
+public class LoginResponse {
     private String token;
 
     private long expiresIn;
 
-    public LoginResponseDTO(String token, long expiresIn) {
+    public LoginResponse(String token, long expiresIn) {
         this.token = token;
         this.expiresIn = expiresIn;
     }
-
+    public LoginResponse() {
+    }
     public String getToken() {
         return token;
     }
 
-    public void setToken(String token) {
+    public LoginResponse  setToken(String token) {
         this.token = token;
+        return this ;
     }
 
     public long getExpiresIn() {
         return expiresIn;
     }
 
-    public void setExpiresIn(long expiresIn) {
+    public LoginResponse setExpiresIn(long expiresIn) {
         this.expiresIn = expiresIn;
+        return this ;
     }
 }
