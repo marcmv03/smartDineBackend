@@ -12,28 +12,53 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * Handle validation errors for @Valid annotations
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
+        Map<String, Object> response = new HashMap<>();
         Map<String, String> errors = new HashMap<>();
+        
         ex.getBindingResult().getFieldErrors().forEach(error -> {
             String fieldName = error.getField();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        
+        response.put("success", false);
+        response.put("message", "Errores de validación");
+        response.put("errors", errors);
+        
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    // Controlador de excepciones para errores de negocio (argumentos inválidos)
+    /**
+     * Handle business logic exceptions (IllegalArgumentException)
+     */
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", ex.getMessage());
+        
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    // Controlador de excepciones genérico
+    /**
+     * Handle generic exceptions
+     */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleGeneralException(Exception ex) {
-        System.err.print(ex.getMessage());
-        return new ResponseEntity<>("An internal server error has occurred.", HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "Ha ocurrido un error interno del servidor");
+        
+        // Log the actual error for debugging
+        System.err.println("Unexpected error: " + ex.getMessage());
+        ex.printStackTrace();
+        
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
