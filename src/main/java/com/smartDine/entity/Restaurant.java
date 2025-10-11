@@ -1,19 +1,22 @@
 package com.smartDine.entity;
 
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+@Getter
+@Setter
 @Entity
 @Table(name = "restaurants")
 public class Restaurant {
     @Id 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Getter
     @Column(nullable = false)
     private String name;
     @Column(nullable = false)
@@ -21,27 +24,20 @@ public class Restaurant {
     @Column(name = "description", length = 1000)
     private String description;
     
+    @ManyToOne
+    @JoinColumn(name = "owner_id", nullable = false)
+    private Business owner;
+    @OneToMany
+    private List<MenuItem> menu;
+    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TimeSlot> timeSlots = new ArrayList<>();
     // Constructors
     public Restaurant() {}
-
     public Restaurant(String name, String address, String description) {
         this.name = name;
         this.address = address;
         this.description = description;
     }
 
-    // Getters and setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
-
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-
-    
 }
