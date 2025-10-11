@@ -6,7 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.smartDine.dto.RestaurantDTO;
+import com.smartDine.entity.Business;
+import com.smartDine.entity.MenuItem;
 import com.smartDine.entity.Restaurant;
+import com.smartDine.entity.TimeSlot;
 import com.smartDine.repository.RestaurantRepository;
 
 @Service 
@@ -88,5 +91,65 @@ public class RestaurantService {
             throw new IllegalArgumentException("Restaurante no encontrado con ID: " + id);
         }
         restaurantRepository.deleteById(id);
+    }
+
+    public boolean isOwnerOfRestaurant(Long restaurantId, Business business) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with  ID: " + restaurantId));
+        return restaurant.getOwner().getId().equals(business.getId());
+    }
+
+    public Restaurant createRestaurantForBusiness(Business owner, RestaurantDTO restaurantDTO) {
+        Restaurant restaurant = new Restaurant();
+        restaurant.setName(restaurantDTO.getName());
+        restaurant.setAddress(restaurantDTO.getAddress());
+        restaurant.setDescription(restaurantDTO.getDescription());
+        restaurant.setOwner(owner);
+        Restaurant savedRestaurant = restaurantRepository.save(restaurant);
+        // Añadir el restaurante a la lista del propietario
+        List<Restaurant> restaurants = owner.getRestaurants();
+        if (restaurants == null) {
+            restaurants = new java.util.ArrayList<>();
+        }
+        restaurants.add(savedRestaurant);
+        owner.setRestaurants(restaurants);
+        // Si tienes un repositorio de Business, guarda el owner actualizado
+        // businessRepository.save(owner);
+        return savedRestaurant;
+    }
+    public boolean  addMenuItem(Long restaurantId, MenuItem menuItem) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+        List<MenuItem> menu = restaurant.getMenu();
+        if (menu == null) {
+            menu = new java.util.ArrayList<>();
+        }
+        menu.add(menuItem);
+        restaurant.setMenu(menu);
+        restaurantRepository.save(restaurant);
+        return true;
+    }
+    public List<MenuItem> getMenuItems(Long restaurantId) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+        return restaurant.getMenu();
+    }
+
+    public TimeSlot addTimeSlot(TimeSlot timeSlot) {
+        if (timeSlot == null || timeSlot.getRestaurant() == null || timeSlot.getRestaurant().getId() == null) {
+            throw new IllegalArgumentException("TimeSlot must be associated with a restaurant");
+        }
+        Restaurant restaurant = restaurantRepository.findById(timeSlot.getRestaurant().getId())
+            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + timeSlot.getRestaurant().getId()));
+        restaurant.getTimeSlots().add(timeSlot);
+        timeSlot.setRestaurant(restaurant);
+        restaurantRepository.save(restaurant);
+        return timeSlot;
+    }
+
+    public List<TimeSlot> getTimeSlots(Long restaurantId) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+        return restaurant.getTimeSlots();
     }
 }

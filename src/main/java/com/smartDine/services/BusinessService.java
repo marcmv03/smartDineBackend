@@ -1,7 +1,10 @@
 package com.smartDine.services;
 
 import com.smartDine.entity.Business;
+import com.smartDine.entity.Restaurant;
+import com.smartDine.dto.RestaurantDTO;
 import com.smartDine.repository.BusinessRepository;
+import com.smartDine.repository.RestaurantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,6 +17,9 @@ public class BusinessService {
 
     @Autowired
     private BusinessRepository businessRepository;
+
+    @Autowired
+    private RestaurantRepository restaurantRepository;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -150,5 +156,32 @@ public class BusinessService {
      */
     public Optional<Business> findById(Long businessId) {
         return businessRepository.findById(businessId);
+    }
+
+    /**
+     * Crea un restaurante y lo asocia al propietario (Business)
+     */
+    public Restaurant createRestaurantForBusiness(Business owner, RestaurantDTO restaurantDTO) {
+        // Validar que el nombre del restaurante no exista ya
+        List<Restaurant> existing = restaurantRepository.findByNameContainingIgnoreCase(restaurantDTO.getName());
+        boolean exactMatch = existing.stream()
+            .anyMatch(r -> r.getName().equalsIgnoreCase(restaurantDTO.getName()));
+        if (exactMatch) {
+            throw new IllegalArgumentException("Ya existe un restaurante con ese nombre");
+        }
+        Restaurant restaurant = new Restaurant();
+        restaurant.setName(restaurantDTO.getName());
+        restaurant.setAddress(restaurantDTO.getAddress());
+        restaurant.setDescription(restaurantDTO.getDescription());
+        restaurant.setOwner(owner);
+        Restaurant savedRestaurant = restaurantRepository.save(restaurant);
+        List<Restaurant> restaurants = owner.getRestaurants();
+        if (restaurants == null) {
+            restaurants = new java.util.ArrayList<>();
+        }
+        restaurants.add(savedRestaurant);
+        owner.setRestaurants(restaurants);
+        businessRepository.save(owner);
+        return savedRestaurant;
     }
 }

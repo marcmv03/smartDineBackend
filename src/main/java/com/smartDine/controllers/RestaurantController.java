@@ -22,6 +22,7 @@ import com.smartDine.entity.Business;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.Role;
 import com.smartDine.entity.User;
+import com.smartDine.services.BusinessService;
 import com.smartDine.services.RestaurantService;
 
 import jakarta.validation.Valid;
@@ -33,6 +34,9 @@ public class RestaurantController {
     @Autowired
     private RestaurantService restaurantService;
     
+    @Autowired
+    private BusinessService businessService;
+
     /**
      * GET /restaurants - Get all restaurants or search by name
      */
@@ -62,8 +66,11 @@ public class RestaurantController {
      * POST /restaurants - Create a new restaurant
      */
     @PostMapping
-    public ResponseEntity<Restaurant> createRestaurant(@Valid @RequestBody RestaurantDTO restaurantDTO) {
-        Restaurant createdRestaurant = restaurantService.createRestaurant(restaurantDTO);
+    public ResponseEntity<Restaurant> createRestaurant(@Valid @RequestBody RestaurantDTO restaurantDTO, @AuthenticationPrincipal User user) {
+        if (!(user instanceof Business)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        Restaurant createdRestaurant = businessService.createRestaurantForBusiness((Business) user, restaurantDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRestaurant);
     }
     
