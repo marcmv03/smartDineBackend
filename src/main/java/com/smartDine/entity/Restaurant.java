@@ -38,6 +38,8 @@ public class Restaurant {
     private List<MenuItem> menu;
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TimeSlot> timeSlots = new ArrayList<>();
+    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<com.smartDine.entity.Table> tables = new ArrayList<>();
     // Constructors
     public Restaurant() {}
     public Restaurant(String name, String address, String description) {
