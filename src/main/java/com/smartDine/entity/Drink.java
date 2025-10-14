@@ -1,25 +1,25 @@
 package com.smartDine.entity;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.Getter;
 import lombok.Setter;
+
 @Entity
 @Getter
-@Table(name = "drinks")
+@Setter
+@jakarta.persistence.Table(name = "drinks")
 public class Drink extends MenuItem {
     @Enumerated(EnumType.STRING)
     private DrinkType drinkType;
 
-    public Drink(Long id, String name, String description, Double price) {
-        super(id, name, description, price);
-    }
-
     public Drink() {
-
+        super();
     }
 
-    public Drink  setDrinkType(DrinkType drinkType) {
+    public Drink setDrinkType(DrinkType drinkType) {
         this.drinkType = drinkType;
-        return this ;
+        return this;
     }
 }

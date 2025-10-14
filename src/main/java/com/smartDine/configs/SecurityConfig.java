@@ -38,7 +38,7 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/smartdine/api/me").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/restaurants/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "smartdine/api/restaurants/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

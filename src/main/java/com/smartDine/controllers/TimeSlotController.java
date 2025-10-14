@@ -27,30 +27,35 @@ import com.smartDine.services.TimeSlotService;
 @RequestMapping("/smartdine/api/restaurants/{restaurantId}")
 public class TimeSlotController {
     @Autowired
-    private TimeSlotService timeSlotService ; 
+    private TimeSlotService timeSlotService;
+    
     @PostMapping("/timeslots")
-    public ResponseEntity<?> postTimeSlot(@PathVariable Long restaurantId,  
+    public ResponseEntity<TimeSlotDTO> postTimeSlot(@PathVariable Long restaurantId,  
                                             @RequestBody TimeSlotDTO timeSlotDTO,  
-                                            @AuthenticationPrincipal User owner ) {
-          if (owner.getRole() != Role.ROLE_ADMIN && owner.getRole() != Role.ROLE_BUSINESS) {
+                                            @AuthenticationPrincipal User owner) {
+        if (owner.getRole() != Role.ROLE_ADMIN && owner.getRole() != Role.ROLE_BUSINESS) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        TimeSlot timeSlot  = timeSlotService.createTimeSlot(timeSlotDTO, (Business) owner)   ;                                
-        return ResponseEntity.ok(timeSlot) ;
+        timeSlotDTO.setRestaurantId(restaurantId);
+        TimeSlot timeSlot = timeSlotService.createTimeSlot(timeSlotDTO, (Business) owner);
+        TimeSlotDTO timeSlotResponseDTO = TimeSlotDTO.fromEntity(timeSlot);
+        return ResponseEntity.ok(timeSlotResponseDTO);
     
     }
+    
     @GetMapping("/timeslots")
-    public ResponseEntity<?> getTimeSlots(@RequestParam Long restaurantId, 
+    public ResponseEntity<List<TimeSlotDTO>> getTimeSlots(@RequestParam Long restaurantId, 
                                 @AuthenticationPrincipal User user,
                                 @RequestParam(name = "day") DayOfWeek dayOfWeek) { 
-        List<TimeSlot> timeSlots  ;
-        if( dayOfWeek == null ) {
-            timeSlots = timeSlotService.getTimeSlotsForRestaurant(restaurantId) ;
+        List<TimeSlot> timeSlots;
+        if (dayOfWeek == null) {
+            timeSlots = timeSlotService.getTimeSlotsForRestaurant(restaurantId);
         } 
         else {
-            timeSlots = timeSlotService.getTimeSlotsForRestaurantByDay(restaurantId, dayOfWeek) ;
+            timeSlots = timeSlotService.getTimeSlotsForRestaurantByDay(restaurantId, dayOfWeek);
         }
-        return ResponseEntity.ok(timeSlots) ;
+        List<TimeSlotDTO> timeSlotDTOs = TimeSlotDTO.fromEntity(timeSlots);
+        return ResponseEntity.ok(timeSlotDTOs);
         
     }
     

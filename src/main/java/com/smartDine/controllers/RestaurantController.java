@@ -41,48 +41,52 @@ public class RestaurantController {
      * GET /restaurants - Get all restaurants or search by name
      */
     @GetMapping
-    public ResponseEntity<List<Restaurant>> getRestaurants(
+    public ResponseEntity<List<RestaurantDTO>> getRestaurants(
         @RequestParam(value = "search", required = false) String searchTerm) {
         List<Restaurant> restaurants = restaurantService.getRestaurants(searchTerm);
-        return ResponseEntity.ok(restaurants);
+        List<RestaurantDTO> restaurantDTOs = RestaurantDTO.fromEntity(restaurants);
+        return ResponseEntity.ok(restaurantDTOs);
     }
     
     /**
      * GET /restaurants/{id} - Get restaurant by ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Restaurant> getRestaurantById(@PathVariable Long id ,@AuthenticationPrincipal User user ) {
+    public ResponseEntity<RestaurantDTO> getRestaurantById(@PathVariable Long id, @AuthenticationPrincipal User user) {
         if (user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_BUSINESS) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         Restaurant restaurant = restaurantService.getRestaurantById(id);
         List<Restaurant> userRestaurants = ((Business) user).getRestaurants();
-        userRestaurants.add(restaurant) ; 
+        userRestaurants.add(restaurant);
         ((Business) user).setRestaurants(userRestaurants);
-        return ResponseEntity.ok(restaurant);
+        RestaurantDTO restaurantDTO = RestaurantDTO.fromEntity(restaurant);
+        return ResponseEntity.ok(restaurantDTO);
     }
     
     /**
      * POST /restaurants - Create a new restaurant
      */
     @PostMapping
-    public ResponseEntity<Restaurant> createRestaurant(@Valid @RequestBody RestaurantDTO restaurantDTO, @AuthenticationPrincipal User user) {
+    public ResponseEntity<RestaurantDTO> createRestaurant(@Valid @RequestBody RestaurantDTO restaurantDTO, @AuthenticationPrincipal User user) {
         if (!(user instanceof Business)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         Restaurant createdRestaurant = businessService.createRestaurantForBusiness((Business) user, restaurantDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdRestaurant);
+        RestaurantDTO createdRestaurantDTO = RestaurantDTO.fromEntity(createdRestaurant);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdRestaurantDTO);
     }
     
     /**
      * PUT /restaurants/{id} - Update an existing restaurant
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Restaurant> updateRestaurant(
+    public ResponseEntity<RestaurantDTO> updateRestaurant(
         @PathVariable Long id, 
         @Valid @RequestBody RestaurantDTO restaurantDTO) {
         Restaurant updatedRestaurant = restaurantService.updateRestaurant(id, restaurantDTO);
-        return ResponseEntity.ok(updatedRestaurant);
+        RestaurantDTO updatedRestaurantDTO = RestaurantDTO.fromEntity(updatedRestaurant);
+        return ResponseEntity.ok(updatedRestaurantDTO);
     }
     
     /**

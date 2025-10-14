@@ -1,16 +1,17 @@
 package com.smartDine.services;
 
-import com.smartDine.entity.Business;
-import com.smartDine.entity.Restaurant;
-import com.smartDine.dto.RestaurantDTO;
-import com.smartDine.repository.BusinessRepository;
-import com.smartDine.repository.RestaurantRepository;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
+import com.smartDine.dto.RestaurantDTO;
+import com.smartDine.entity.Business;
+import com.smartDine.entity.Restaurant;
+import com.smartDine.repository.BusinessRepository;
+import com.smartDine.repository.RestaurantRepository;
 
 @Service
 public class BusinessService {
@@ -169,10 +170,7 @@ public class BusinessService {
         if (exactMatch) {
             throw new IllegalArgumentException("Ya existe un restaurante con ese nombre");
         }
-        Restaurant restaurant = new Restaurant();
-        restaurant.setName(restaurantDTO.getName());
-        restaurant.setAddress(restaurantDTO.getAddress());
-        restaurant.setDescription(restaurantDTO.getDescription());
+        Restaurant restaurant = RestaurantDTO.toEntity(restaurantDTO);
         restaurant.setOwner(owner);
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
         List<Restaurant> restaurants = owner.getRestaurants();

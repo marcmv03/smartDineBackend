@@ -51,10 +51,7 @@ public class RestaurantService {
             }
         }
         
-        Restaurant restaurant = new Restaurant();
-        restaurant.setName(restaurantDTO.getName());
-        restaurant.setAddress(restaurantDTO.getAddress());
-        restaurant.setDescription(restaurantDTO.getDescription());
+        Restaurant restaurant = RestaurantDTO.toEntity(restaurantDTO);
         
         return restaurantRepository.save(restaurant);
     }
@@ -100,10 +97,7 @@ public class RestaurantService {
     }
 
     public Restaurant createRestaurantForBusiness(Business owner, RestaurantDTO restaurantDTO) {
-        Restaurant restaurant = new Restaurant();
-        restaurant.setName(restaurantDTO.getName());
-        restaurant.setAddress(restaurantDTO.getAddress());
-        restaurant.setDescription(restaurantDTO.getDescription());
+        Restaurant restaurant = RestaurantDTO.toEntity(restaurantDTO);
         restaurant.setOwner(owner);
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
         // Añadir el restaurante a la lista del propietario

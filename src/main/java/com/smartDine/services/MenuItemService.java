@@ -52,21 +52,12 @@ public class MenuItemService {
     }
 
     public Drink createDrink(DrinkDTO drinkDTO) {
-        Drink drink = (Drink) new Drink()
-            .setName(drinkDTO.getName())
-            .setDescription(drinkDTO.getDescription())
-            .setPrice(drinkDTO.getPrice());
-        drink.setDrinkType(drinkDTO.getDrinkType());
+        Drink drink = DrinkDTO.toEntity(drinkDTO);
         return drinkRepository.save(drink);
     }
 
-    public Dish createDish(DishDTO menuItemDTO) {
-        Dish dish = new Dish();
-        dish.setName(menuItemDTO.getName());
-        dish.setDescription(menuItemDTO.getDescription());
-        dish.setPrice(menuItemDTO.getPrice());
-        dish.setElements(menuItemDTO.getElements());
-        dish.setCourseType(menuItemDTO.getCourseType());
+    public Dish createDish(DishDTO dishDTO) {
+        Dish dish = DishDTO.toEntity(dishDTO);
         return dishRepository.save(dish);
     }
 }

@@ -2,380 +2,684 @@ openapi: 3.0.3
 info:
   title: SmartDine API
   version: 1.0.0
-  description: API per gestionar clients i empreses del sistema SmartDine
-
+  description: |
+    REST API that powers the SmartDine platform for restaurant discovery, menu management,
+    reservations, and user authentication.
 servers:
-  - url: /smartDine/api
-
+  - url: http://localhost:8080
+    description: Local development server
+tags:
+  - name: Authentication
+    description: Endpoints for registering and logging into the platform.
+  - name: Restaurants
+    description: Restaurant catalog management.
+  - name: Menu Items
+    description: Manage dishes and drinks offered by a restaurant.
+  - name: Time Slots
+    description: Configure reservation availability for restaurants.
+  - name: User Profile
+    description: Retrieve the authenticated user profile.
 paths:
-
-  /users/clients:
+  /smartdine/api/auth/register/customer:
+    post:
+      tags:
+        - Authentication
+      summary: Register a customer account
+      operationId: registerCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+            examples:
+              sample:
+                summary: Register customer
+                value:
+                  name: Alex Johnson
+                  email: alex.johnson@example.com
+                  password: secret123
+                  phoneNumber: 34999111222
+      responses:
+        '200':
+          description: Customer created and authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Validation error or duplicated email/phone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate an existing user
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              sample:
+                summary: Login request
+                value:
+                  email: alex.johnson@example.com
+                  password: secret123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid credentials supplied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/auth/register/business:
+    post:
+      tags:
+        - Authentication
+      summary: Register a business account
+      operationId: registerBusiness
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+            examples:
+              sample:
+                summary: Register business
+                value:
+                  name: Tapas Factory
+                  email: admin@tapasfactory.com
+                  password: verysecret
+                  phoneNumber: 34977888999
+      responses:
+        '200':
+          description: Business created and authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Validation error or duplicated email/phone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/restaurants:
     get:
-      summary: Llistar o cercar clients
+      tags:
+        - Restaurants
+      summary: List restaurants
+      operationId: listRestaurants
       parameters:
         - in: query
           name: search
           schema:
             type: string
-          description: Filtra per nom de client
+          description: Optional case-insensitive search by restaurant name.
       responses:
         '200':
-          description: Clients trobats
-        '204':
-          description: Cap client trobat
-        '500':
-          description: Error del servidor
-
+          description: Restaurants found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Restaurant'
     post:
-      summary: Registrar un nou client
+      tags:
+        - Restaurants
+      summary: Create a restaurant for the authenticated business
+      operationId: createRestaurant
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                email:
-                  type: string
-                password:
-                  type: string
-                phone:
-                  type: string
+              $ref: '#/components/schemas/RestaurantRequest'
+            examples:
+              sample:
+                summary: Restaurant payload
+                value:
+                  name: Trattoria Roma
+                  address: Via Roma 42, Barcelona
+                  description: Authentic Italian cuisine.
       responses:
         '201':
-          description: Client creat
-        '400':
-          description: Dades incorrectes
-        '409':
-          description: Client ja registrat
-        '500':
-          description: Error del servidor
-
-  /users/clients/{clientId}:
-    put:
-      summary: Actualitzar dades d’un client
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: clientId
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                email:
-                  type: string
-                phone:
-                  type: string
-      responses:
-        '200':
-          description: Client actualitzat
-        '400':
-          description: Dades incorrectes
-        '401':
-          description: No autoritzat
-        '404':
-          description: Client no trobat
-        '409':
-          description: Email o telèfon ja utilitzat
-        '500':
-          description: Error del servidor
-
-    delete:
-      summary: Eliminar un client
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: clientId
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Client eliminat
-        '401':
-          description: No autoritzat
-        '404':
-          description: Client no trobat
-        '500':
-          description: Error del servidor
-
-  /users/businesses:
+          description: Restaurant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+        '403':
+          description: The authenticated user is not a business
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/restaurants/{restaurantId}:
     get:
-      summary: Llistar o cercar empreses
+      tags:
+        - Restaurants
+      summary: Get restaurant details
+      operationId: getRestaurantById
+      security:
+        - bearerAuth: []
       parameters:
-        - in: query
-          name: search
+        - in: path
+          name: restaurantId
+          required: true
           schema:
-            type: string
-          description: Filtra per nom de l’empresa
+            type: integer
+            format: int64
       responses:
         '200':
-          description: Empreses trobades
-        '204':
-          description: Cap empresa trobada
-        '500':
-          description: Error del servidor
-
-    post:
-      summary: Registrar una nova empresa
+          description: Restaurant details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+        '403':
+          description: User is not allowed to access this restaurant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Restaurant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Restaurants
+      summary: Update a restaurant
+      operationId: updateRestaurant
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                email:
-                  type: string
-                password:
-                  type: string
-                phone:
-                  type: string
+              $ref: '#/components/schemas/RestaurantRequest'
+      responses:
+        '200':
+          description: Restaurant updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+        '404':
+          description: Restaurant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Restaurants
+      summary: Delete a restaurant
+      operationId: deleteRestaurant
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Restaurant deleted successfully
+        '404':
+          description: Restaurant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/restaurants/{restaurantId}/menu-items:
+    post:
+      tags:
+        - Menu Items
+      summary: Create a menu item for a restaurant
+      operationId: createMenuItem
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemRequest'
+            examples:
+              dishExample:
+                summary: New dish
+                value:
+                  type: DISH
+                  name: Pasta Carbonara
+                  description: Classic Italian pasta with pancetta.
+                  price: 12.5
+                  elements: [GLUTEN, DAIRY]
+                  courseType: MAIN_COURSE
+              drinkExample:
+                summary: New drink
+                value:
+                  type: DRINK
+                  name: Fresh Orange Juice
+                  description: Squeezed to order.
+                  price: 3.5
+                  drinkType: JUICE
       responses:
         '201':
-          description: Empresa creada
-        '400':
-          description: Dades incorrectes
-        '409':
-          description: Empresa ja registrada
-        '500':
-          description: Error del servidor
-
-  /users/businesses/{businessId}:
-    put:
-      summary: Actualitzar dades d’una empresa
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: businessId
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                email:
-                  type: string
-                phone:
-                  type: string
-      responses:
-        '200':
-          description: Empresa actualitzada
-        '400':
-          description: Dades incorrectes
-        '401':
-          description: No autoritzat
-        '404':
-          description: Empresa no trobada
-        '409':
-          description: Email o telèfon ja utilitzat
-        '500':
-          description: Error del servidor
-
-    delete:
-      summary: Eliminar una empresa
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: businessId
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Empresa eliminada
-        '401':
-          description: No autoritzat
-        '404':
-          description: Empresa no trobada
-        '500':
-          description: Error del servidor
-  /restaurants:
-    get:
-      summary: Llista tots els restaurants
-      parameters:
-        - name: name
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: category
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: address
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: global_calification
-          in: query
-          required: false
-          schema:
-            type: number
-      responses:
-        '200':
-          description: Llista de restaurants retornada
-        '204':
-          description: Cap restaurant disponible
-
-  /restaurants/{restaurant_id}:
-    get:
-      summary: Detalls d’un restaurant
-      parameters:
-        - name: restaurant_id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Informació del restaurant
-        '404':
-          description: Restaurant no trobat
-
-  /businesses/{business_id}/restaurants:
-    get:
-      summary: Restaurants d’una empresa
-      parameters:
-        - name: business_id
-          in: path
-          required: true
-          schema:
-            type: string
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Llista de restaurants de l’empresa
+          description: Menu item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
         '403':
-          description: Accés denegat
-        '404':
-          description: Empresa no trobada
-
+          description: The authenticated user is not the owner of the restaurant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error or unsupported menu item type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Menu Items
+      summary: List menu items for a restaurant
+      operationId: listMenuItems
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Menu items for the restaurant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+  /smartdine/api/restaurants/{restaurantId}/timeSlots:
     post:
-      summary: Crear un restaurant
-      parameters:
-        - name: business_id
-          in: path
-          required: true
-          schema:
-            type: string
+      tags:
+        - Time Slots
+      summary: Create a time slot for reservations
+      operationId: createTimeSlot
       security:
         - bearerAuth: []
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                location:
-                  type: string
-                category:
-                  type: string
-                address:
-                  type: string
-      responses:
-        '201':
-          description: Restaurant creat
-        '400':
-          description: Error de validació
-        '403':
-          description: No autoritzat
-
-  /businesses/{business_id}/restaurants/{restaurant_id}:
-    put:
-      summary: Actualitzar un restaurant
-      parameters:
-        - name: business_id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: restaurant_id
-          in: path
-          required: true
-          schema:
-            type: string
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                location:
-                  type: string
-                category:
-                  type: string
-                address:
-                  type: string
+              $ref: '#/components/schemas/TimeSlotRequest'
+            examples:
+              sample:
+                summary: New time slot
+                value:
+                  startTime: 12.0
+                  endTime: 14.0
+                  dayOfWeek: MONDAY
       responses:
         '200':
-          description: Actualitzat amb èxit
-        '400':
-          description: Error en les dades
+          description: Time slot created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeSlot'
         '403':
-          description: Sense permisos
-        '404':
-          description: Restaurant no trobat
-
-    delete:
-      summary: Eliminar un restaurant
-      parameters:
-        - name: business_id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: restaurant_id
-          in: path
-          required: true
-          schema:
-            type: string
+          description: User is not allowed to create time slots for this restaurant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error (e.g., duplicated start and end time)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/me:
+    get:
+      tags:
+        - User Profile
+      summary: Get the authenticated user profile
+      operationId: getMyProfile
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Restaurant eliminat
+          description: Profile information for the authenticated user
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/CustomerProfile'
+                  - $ref: '#/components/schemas/BusinessProfile'
         '403':
-          description: No autoritzat
-        '404':
-          description: No trobat    
-
+          description: The user role is not recognized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    RegisterUserRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+        - phoneNumber
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        phoneNumber:
+          type: integer
+          format: int64
+          description: International phone number without separators.
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    LoginResponse:
+      type: object
+      required:
+        - token
+        - expiresIn
+        - userId
+        - name
+        - email
+      properties:
+        token:
+          type: string
+          description: JWT access token.
+        expiresIn:
+          type: integer
+          format: int64
+          description: Token expiration epoch in milliseconds.
+        userId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        success:
+          type: boolean
+          description: Indicates operation success (always false for errors).
+          default: false
+    RestaurantRequest:
+      type: object
+      required:
+        - name
+        - address
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        description:
+          type: string
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        address:
+          type: string
+        description:
+          type: string
+        ownerId:
+          type: integer
+          format: int64
+          description: Identifier of the business that owns the restaurant.
+        menu:
+          type: array
+          description: Dishes and drinks currently associated with the restaurant.
+          items:
+            $ref: '#/components/schemas/MenuItem'
+        timeSlots:
+          type: array
+          description: Reservation time slots configured for the restaurant.
+          items:
+            $ref: '#/components/schemas/TimeSlot'
+    MenuItemRequest:
+      type: object
+      required:
+        - type
+        - name
+        - description
+        - price
+      properties:
+        type:
+          type: string
+          description: Distinguishes between dish and drink payloads.
+          enum:
+            - DISH
+            - DRINK
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: double
+        imageUrl:
+          type: string
+        courseType:
+          $ref: '#/components/schemas/CourseType'
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Element'
+        drinkType:
+          $ref: '#/components/schemas/DrinkType'
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: double
+        drinkType:
+          $ref: '#/components/schemas/DrinkType'
+        courseType:
+          $ref: '#/components/schemas/CourseType'
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Element'
+    TimeSlotRequest:
+      type: object
+      required:
+        - startTime
+        - endTime
+        - dayOfWeek
+      properties:
+        startTime:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 24
+          description: Start hour expressed in 24-hour decimal format (e.g., 18.5 for 18:30).
+        endTime:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 24
+          description: End hour expressed in 24-hour decimal format.
+        dayOfWeek:
+          $ref: '#/components/schemas/DayOfWeek'
+    TimeSlot:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        startTime:
+          type: number
+          format: double
+        endTime:
+          type: number
+          format: double
+        dayOfWeek:
+          $ref: '#/components/schemas/DayOfWeek'
+    CustomerProfile:
+      type: object
+      description: Customer user profile.
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phoneNumber:
+          type: integer
+          format: int64
+        role:
+          type: string
+          enum:
+            - ROLE_CUSTOMER
+    BusinessProfile:
+      type: object
+      description: Business user profile.
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phoneNumber:
+          type: integer
+          format: int64
+        role:
+          type: string
+          enum:
+            - ROLE_BUSINESS
+        restaurants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Restaurant'
+    DrinkType:
+      type: string
+      enum:
+        - WINE
+        - BEER
+        - COCKTAIL
+        - SOFT_DRINK
+        - JUICE
+        - WATER
+        - HOT_BEVERAGE
+    CourseType:
+      type: string
+      enum:
+        - MAIN_COURSE
+        - APPETIZER
+        - DESSERT
+    Element:
+      type: string
+      enum:
+        - GLUTEN
+        - DAIRY
+        - NUTS
+        - SEAFOOD
+        - SOY
+        - EGG
+        - VEGETARIAN
+        - VEGAN
+    DayOfWeek:
+      type: string
+      enum:
+        - MONDAY
+        - TUESDAY
+        - WEDNESDAY
+        - THURSDAY
+        - FRIDAY
+        - SATURDAY
+        - SUNDAY
