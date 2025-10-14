@@ -12,6 +12,7 @@ information below to make safe, repository-aware code changes.
 Summary (big picture)
 - Spring Boot application (entry: `com.smartDine.SmartDineApplication`).
 - Typical layering: controllers -> services -> repositories -> JPA entities.
+- **Controllers return DTOs, NOT entities**. All API responses use Data Transfer Objects.
 - Security: JWT-based stateless auth via `configs.JwtAuthenticationFilter` and
   `configs.SecurityConfig`. Roles use the `entity.Role` enum and `entity.User`.
 - Database: Spring Data JPA repositories (e.g. `repository.RestaurantRepository`).
@@ -25,10 +26,17 @@ Quick dev workflows
 
 Project-specific conventions and patterns
 - Controllers live under `com.smartDine.controllers` and return Spring
-  `ResponseEntity<>`. Example: `RestaurantController` enforces role checks using
+  `ResponseEntity<DTO>`. Example: `RestaurantController` enforces role checks using
   `@AuthenticationPrincipal User` and `User.getRole()`.
+- **DTOs (Data Transfer Objects)** live under `com.smartDine.dto`. All DTOs must:
+  - Have an `id` field with getters/setters
+  - Implement `toEntity(DTO dto)` static method (checks `dto.getId() != null` before setting)
+  - Implement `fromEntity(Entity entity)` static method (always sets id)
+  - Implement `fromEntity(List<Entity>)` static method for list conversions
+  - Use scalar values or arrays only; NO nested entity objects (use IDs instead)
 - Services are thin layers that validate business rules and call repositories.
   Prefer adding validation to the service layer (see `RestaurantService` name-uniqueness checks).
+  **Services must use `DTO.toEntity()` for entity construction**, not manual field assignment.
 - Repositories extend `JpaRepository` and use Spring Data query methods,
   e.g. `findByNameContainingIgnoreCase` in `RestaurantRepository`.
 - Entities use JPA annotations and Lombok for getters/setters in some classes.
@@ -53,6 +61,8 @@ Style and safe-change rules for AI agents
 - When editing entities or repositories, update tests under `src/test/java/...`
   and `src/test/resources/application-test.properties` to run with H2.
 - Do not commit secrets or modify `application.properties` with real credentials.
+- **Controllers must use `DTO.fromEntity()` to convert service responses** before
+  returning `ResponseEntity<DTO>`. Use list version for collections.
 
 Files to inspect for context when changing behavior
 - `src/main/java/com/smartDine/configs/SecurityConfig.java` — security rules.
@@ -61,6 +71,8 @@ Files to inspect for context when changing behavior
   with role checks and DTO usage (`dto.RestaurantDTO`).
 - `src/main/java/com/smartDine/services/RestaurantService.java` — service patterns and
   validation examples (name uniqueness, owner association).
+- `src/main/java/com/smartDine/dto/RestaurantDTO.java` — example DTO with `toEntity()` and
+  `fromEntity()` conversion methods.
 - `pom.xml` and `HELP.md` — build and runtime hints (Postgres vs H2 tests).
 
 Small examples (copyable patterns)
@@ -69,6 +81,19 @@ Small examples (copyable patterns)
     `IllegalArgumentException` on conflict, then persist with `repository.save()`.
 - Add endpoint security by checking `@AuthenticationPrincipal User user` and
   `user.getRole()` where necessary (see `RestaurantController.getRestaurantById`).
+- Convert entity to DTO in controller: `RestaurantDTO.fromEntity(restaurant)` for single
+  objects or `RestaurantDTO.fromEntity(restaurantList)` for collections.
+- Convert DTO to entity in service: `Restaurant restaurant = RestaurantDTO.toEntity(dto);`
+
+Known pitfalls and edge cases
+- **Entity naming conflicts**: There is a `Table` entity class in `com.smartDine.entity`
+  package. When using JPA's `@Table` annotation, always use fully qualified import
+  `import jakarta.persistence.Table;` to avoid conflicts.
+- **MenuItem hierarchy**: `MenuItem` is an abstract entity with `Dish` and `Drink` as
+  subclasses using `@Inheritance(JOINED)`. When creating menu items, services must
+  determine the subtype and call the appropriate repository.
+- **DTO to Entity id handling**: When converting DTO to Entity using `toEntity()`, always
+  check if `dto.getId() != null` before setting it on the entity, as JPA manages entity IDs.
 
 If anything is ambiguous or you need more environment details (e.g. how CI
 runs tests), ask the maintainers and include links to the files above in your

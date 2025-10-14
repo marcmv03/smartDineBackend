@@ -1,12 +1,19 @@
 package com.smartDine.entity;
+
 import java.util.List;
 
-import jakarta.persistence.*;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Table ;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.Getter;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Getter
+@Setter
 @Table(name = "dishes")
 public class Dish extends MenuItem {
     
@@ -17,23 +24,17 @@ public class Dish extends MenuItem {
     @Enumerated(EnumType.STRING)
     private List<Element> elements;
 
-    public Dish(Long id, String name, String description, Double price) {
-        super(id, name, description, price);
-    }
     public Dish() {
-        super() ;
+        super();
     }
 
     public Dish addElement(Element element) {
-        this.elements.add(element);
+        if (elements != null) this.elements.add(element);
+        else {
+            elements = new java.util.ArrayList<>();
+            elements.add(element);
+        }
         return this;
     }
-    public Dish setCourseType(CourseType courseType) {
-        this.courseType = courseType;
-        return this;
-    }
-    public Dish setElements(List<Element> elements) {
-        this.elements = elements;
-        return this;
-    }
+    
 }

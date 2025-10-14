@@ -30,16 +30,17 @@ public class MenuItemController {
     private MenuItemService menuItemService;
 
     @PostMapping("/restaurants/{restaurantId}/menu-items")
-    public ResponseEntity<?> createMenuItem(@PathVariable Long restaurantId, @Valid @RequestBody MenuItemDTO menuItemDto, @AuthenticationPrincipal User user) {
+    public ResponseEntity<MenuItemDTO> createMenuItem(@PathVariable Long restaurantId, @Valid @RequestBody MenuItemDTO menuItemDto, @AuthenticationPrincipal User user) {
         MenuItem menuItem = menuItemService.createMenuItemForRestaurant(restaurantId, menuItemDto, user);
-        return new ResponseEntity<>(menuItem, HttpStatus.CREATED);
+        MenuItemDTO menuItemDTO = MenuItemDTO.fromEntity(List.of(menuItem)).get(0);
+        return new ResponseEntity<>(menuItemDTO, HttpStatus.CREATED);
     }
-    //to-do
-    //make a get mapping to get the menu items.
+    
     @GetMapping("/restaurants/{restaurantId}/menu-items")
-    public ResponseEntity<?> getMenuItemsByRestaurant(@PathVariable Long restaurantId, @AuthenticationPrincipal User user) {
+    public ResponseEntity<List<MenuItemDTO>> getMenuItemsByRestaurant(@PathVariable Long restaurantId, @AuthenticationPrincipal User user) {
         List<MenuItem> menuItems = menuItemService.getMenuItemsByRestaurant(restaurantId);
-        return ResponseEntity.ok(menuItems);
+        List<MenuItemDTO> menuItemDTOs = MenuItemDTO.fromEntity(menuItems);
+        return ResponseEntity.ok(menuItemDTOs);
     }
     
 }

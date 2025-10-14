@@ -2,6 +2,7 @@
 
 Purpose
 - This file gives concise, actionable rules for automated coding agents (AI assistants, copilot-style bots) working on the smartDineBackend repository. Follow these rules to make safe, useful, and repository-aware edits.
+- Context : Read Readme.md to have context of the project
 
 High-level contract
 - Inputs: small-to-medium change requests, bug reports, or feature requests related to the Java Spring Boot backend located under `src/main/java/com/smartDine`.
@@ -10,11 +11,14 @@ High-level contract
 
 Quick facts (where to look)
 - App entry: `com.smartDine.SmartDineApplication`.
-- Controllers: `src/main/java/com/smartDine/controllers` (use `ResponseEntity<>`).
+- Controllers: `src/main/java/com/smartDine/controllers` (use `ResponseEntity<DTO>`).
+- DTOs: `src/main/java/com/smartDine/dto` — Data Transfer Objects for API requests/responses.
 - Services: `src/main/java/com/smartDine/services` — perform business validation here.
 - Repositories: `src/main/java/com/smartDine/repository` — extend `JpaRepository`.
+- Entities: `src/main/java/com/smartDine/entity` — JPA entities (internal use only, not exposed in API).
 - Security: `src/main/java/com/smartDine/configs/SecurityConfig.java` and `JwtAuthenticationFilter.java`.
 - Tests: `src/test/java` and `src/test/resources/application-test.properties` (H2 in-memory DB).
+- Api documentation : api.yaml 
 
 Coding and change rules
 - Preserve API paths under `/smartdine/api/` unless the user explicitly approves breaking changes.
@@ -22,6 +26,48 @@ Coding and change rules
 - When changing entities, repositories, or service signatures, update or add unit tests under `src/test/java` to cover happy path + one edge case.
 - Use Spring Data query methods where appropriate (e.g., `findByNameContainingIgnoreCase`) rather than hand-rolled queries unless necessary.
 - Use Lombok getters/setters only where already present; don't introduce Lombok in new files unless consistent with repository style.
+- **Controllers MUST return DTOs, never entities**. All the fields of the DTO should be scalar values or arrays, but never other entities.
+- The exceptions are handled by global exception handler, located in package com.smartdine.handlers
+
+DTO and Entity Conversion Rules (CRITICAL)
+- **All DTOs must have an `id` field** with getters and setters.
+- **All DTOs must implement two static methods**:
+  1. `toEntity(DTO dto)`: Converts DTO to Entity. **MUST check if `dto.getId() != null` before assigning id to entity** (id is managed by JPA).
+  2. `fromEntity(Entity entity)`: Converts Entity to DTO. Always sets the id from entity to DTO.
+- **All DTOs must implement a list conversion method**: `fromEntity(List<Entity> entities)` that returns `List<DTO>` using streams.
+- **Services must use `DTO.toEntity()` for entity construction**, not manual field-by-field assignment.
+- **Controllers must use `DTO.fromEntity()` to convert service responses** before returning `ResponseEntity<DTO>`.
+- **Example pattern** (see `RestaurantDTO`, `TimeSlotDTO`, `DishDTO`, `DrinkDTO`):
+  ```java
+  public static Restaurant toEntity(RestaurantDTO dto) {
+      Restaurant entity = new Restaurant();
+      if (dto.getId() != null) {
+          entity.setId(dto.getId()); // Only if entity allows id setting
+      }
+      entity.setName(dto.getName());
+      // ... other fields
+      return entity;
+  }
+  
+  public static RestaurantDTO fromEntity(Restaurant entity) {
+      RestaurantDTO dto = new RestaurantDTO();
+      dto.setId(entity.getId());
+      dto.setName(entity.getName());
+      // ... other fields
+      return dto;
+  }
+  
+  public static List<RestaurantDTO> fromEntity(List<Restaurant> entities) {
+      return entities.stream()
+          .map(RestaurantDTO::fromEntity)
+          .collect(Collectors.toList());
+  }
+  ```
+- **For polymorphic DTOs** (like `MenuItemDTO` with `DishDTO` and `DrinkDTO`):
+  - Parent DTO should have abstract conversion handling.
+  - Each subclass implements its own `toEntity()` and `fromEntity()` methods.
+  - Parent DTO implements list conversion that checks instanceof for proper DTO type.
+- **DO NOT expose entity relationships in DTOs**. Use IDs instead (e.g., `restaurantId` instead of `Restaurant` object).
 
 Security and secrets
 - Never add real secrets or credential values to `application.properties` or to commits. If needed, add a placeholder and document required environment variables.
@@ -45,9 +91,36 @@ How to validate edits
 - Run `mvnw.cmd test` locally (PowerShell) after edits. Aim for green tests. If tests fail for unrelated reasons, report test output and proposed next steps.
 
 Edge cases and pitfalls known in this repo
-- `compose.yaml` currently contains no services; do not assume Docker Compose dev services are available (see `HELP.md`).
+- `compose.yaml` currently contains no services; do not assume Docker Compose dev services are available (see `Readme.md`).
 - The `User` hierarchy uses `@Inheritance(JOINED)` and `Business` is a subclass — changes to user tables need careful migration considerations.
 - Some controllers check role by calling `user.getRole()` and casting (`(Business) user`). Ensure type checks before casts to avoid ClassCastException.
+- **Entity naming conflicts**: There is a `Table` entity class in `com.smartDine.entity` package. When using JPA's `@Table` annotation, always use fully qualified import `import jakarta.persistence.Table;` to avoid conflicts.
+- **MenuItem hierarchy**: `MenuItem` is an abstract entity with `Dish` and `Drink` as subclasses using `@Inheritance(JOINED)`. When creating menu items, services must determine the subtype and call the appropriate repository.
+- **TimeSlot validation**: `TimeSlotDTO` has a custom `@AssertTrue` validation for `isValidTimeRange()` to ensure startTime < endTime.
+- **Restaurant ownership**: Most restaurant operations require checking if the authenticated `Business` user is the owner via `RestaurantService.isOwnerOfRestaurant()`.
+- **DTO to Entity id handling**: When converting DTO to Entity using `toEntity()`, always check if `dto.getId() != null` before setting it on the entity, as JPA manages entity IDs. Some entities may not expose `setId()` directly.
+
+Entity and DTO Structure Guide
+- **Restaurant**: 
+  - Entity has: `id`, `name`, `address`, `description`, `owner` (Business), `menu` (List<MenuItem>), `timeSlots` (List<TimeSlot>)
+  - DTO has: `id`, `name`, `address`, `description` (no nested objects)
+- **MenuItem** (abstract):
+  - Entity has: `id`, `name`, `description`, `price`
+  - DTO has: `id`, `name`, `description`, `price`, `imageUrl`, `itemType`
+  - Subclasses: `Dish`/`DishDTO` (with `courseType`, `elements`), `Drink`/`DrinkDTO` (with `drinkType`)
+- **TimeSlot**:
+  - Entity has: `id`, `startTime`, `endTime`, `dayOfWeek`, `restaurant` (Restaurant)
+  - DTO has: `id`, `startTime`, `endTime`, `dayOfWeek`, `restaurantId` (Long, not Restaurant object)
+- **Customer**:
+  - Entity extends `User`: `id`, `name`, `email`, `password`, `phoneNumber`
+  - DTO has: `id`, `name`, `email`, `password`, `phoneNumber` (as String)
+
+Service Layer Patterns
+- **RestaurantService**: Validates name uniqueness, uses `RestaurantDTO.toEntity()` for creation.
+- **BusinessService**: Creates restaurants for business owners, validates email/phone uniqueness.
+- **MenuItemService**: Determines subtype (Dish/Drink) and calls `DishDTO.toEntity()` or `DrinkDTO.toEntity()`.
+- **TimeSlotService**: Uses `TimeSlotDTO.toEntity()`, validates ownership and time slot conflicts.
+- **Pattern**: Services receive DTOs from controllers, convert to entities, perform validation, save, and return entities (controllers then convert back to DTOs).
 
 If blocked or uncertain
 - If a change requires infra (real Postgres, external OAuth client secrets, or CI settings), present a clear list of missing items and a fallback (modify tests to use H2 or mock external calls).

@@ -41,10 +41,7 @@ public class TimeSlotService {
             throw new IllegalArgumentException("A time slot with the same start and end time already exists for this day");
         }
 
-        TimeSlot timeSlot = new TimeSlot();
-        timeSlot.setStartTime(timeSlotDTO.getStartTime());
-        timeSlot.setEndTime(timeSlotDTO.getEndTime());
-        timeSlot.setDayOfWeek(timeSlotDTO.getDayOfWeek());
+        TimeSlot timeSlot = TimeSlotDTO.toEntity(timeSlotDTO);
         timeSlot.setRestaurant(restaurant);
 
         TimeSlot savedTimeSlot = timeSlotRepository.save(timeSlot);
