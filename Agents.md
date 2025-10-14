@@ -46,7 +46,11 @@ Polymorphic DTOs (inheritance hierarchy):
 - Jackson uses the `type` property (e.g., `"type": "DISH"` or `"type": "DRINK"`) to deserialize to the correct subclass.
 - Example from `MenuItemDTO.java`:
   ```java
-  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+  @JsonTypeInfo(
+      use = JsonTypeInfo.Id.NAME,
+      include = JsonTypeInfo.As.PROPERTY,
+      property = "type"
+  )
   @JsonSubTypes({
       @JsonSubTypes.Type(value = DishDTO.class, name = "DISH"),
       @JsonSubTypes.Type(value = DrinkDTO.class, name = "DRINK")
@@ -109,7 +113,7 @@ Edge cases and pitfalls known in this repo
 - Some controllers check role by calling `user.getRole()` and casting (`(Business) user`). Ensure type checks before casts to avoid ClassCastException. Prefer pattern matching with `instanceof`: `if (user instanceof Business business)`.
 - Entity inheritance: Both `User` (with `Customer`, `Business` subclasses) and `MenuItem` (with `Dish`, `Drink` subclasses) use `@Inheritance(JOINED)` strategy.
 - DTO inheritance: `MenuItemDTO` uses Jackson polymorphic type handling with `@JsonTypeInfo` — ensure `type` field is included in JSON requests.
-- Fluent setters: Some entity methods return `this` for chaining (e.g., `dish.setName("name").setPrice(10.0)`). Be consistent with existing entity patterns.
+- Fluent setters: Some entity methods return `this` for chaining (e.g., `drink.setName("Coffee").setPrice(3.50)`). Be consistent with existing entity patterns.
 - List initialization: When adding items to entity relationships (e.g., `restaurant.getMenu().add(item)`), check for null and initialize if needed:
   ```java
   List<MenuItem> menu = restaurant.getMenu();
