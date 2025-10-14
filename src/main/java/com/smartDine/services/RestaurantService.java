@@ -146,4 +146,23 @@ public class RestaurantService {
             .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
         return restaurant.getTimeSlots();
     }
+    
+    public boolean addTable(Long restaurantId, com.smartDine.entity.Table table) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+        List<com.smartDine.entity.Table> tables = restaurant.getTables();
+        if (tables == null) {
+            tables = new java.util.ArrayList<>();
+        }
+        tables.add(table);
+        restaurant.setTables(tables);
+        restaurantRepository.save(restaurant);
+        return true;
+    }
+    
+    public List<com.smartDine.entity.Table> getTables(Long restaurantId) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+        return restaurant.getTables();
+    }
 }
