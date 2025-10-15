@@ -13,6 +13,12 @@ public class DrinkDTO extends MenuItemDTO {
     
     public DrinkDTO() {
         super();
+        setItemType("DRINK");
+    }
+    public DrinkDTO(Long id, String name, String description, Double price, String itemType, DrinkType drinkType,String imageUrl) {
+        super(name, description, price, imageUrl) ;
+        setItemType("DRINK");
+        this.drinkType = drinkType;
     }
     
     public static Drink toEntity(DrinkDTO dto) {

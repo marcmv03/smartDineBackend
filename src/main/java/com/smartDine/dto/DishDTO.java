@@ -17,6 +17,13 @@ public class DishDTO extends MenuItemDTO {
     
     public DishDTO() {
         super();
+        setItemType("DISH");
+    }
+    public DishDTO(Long id, String name, String description, Double price, String itemType, List<Element> elements, CourseType courseType,String imageUrl) {
+        super(name, description, price, imageUrl) ;
+        setItemType("DISH");
+        this.elements = elements;
+        this.courseType = courseType;
     }
     
     public static Dish toEntity(DishDTO dto) {

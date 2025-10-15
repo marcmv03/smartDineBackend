@@ -20,9 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.smartDine.dto.RestaurantDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Restaurant;
-import com.smartDine.entity.Role;
 import com.smartDine.entity.User;
-import com.smartDine.services.BusinessService;
 import com.smartDine.services.RestaurantService;
 
 import jakarta.validation.Valid;
@@ -33,9 +31,6 @@ import jakarta.validation.Valid;
 public class RestaurantController {
     @Autowired
     private RestaurantService restaurantService;
-    
-    @Autowired
-    private BusinessService businessService;
 
     /**
      * GET /restaurants - Get all restaurants or search by name
@@ -53,13 +48,7 @@ public class RestaurantController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<RestaurantDTO> getRestaurantById(@PathVariable Long id, @AuthenticationPrincipal User user) {
-        if (user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_BUSINESS) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
         Restaurant restaurant = restaurantService.getRestaurantById(id);
-        List<Restaurant> userRestaurants = ((Business) user).getRestaurants();
-        userRestaurants.add(restaurant);
-        ((Business) user).setRestaurants(userRestaurants);
         RestaurantDTO restaurantDTO = RestaurantDTO.fromEntity(restaurant);
         return ResponseEntity.ok(restaurantDTO);
     }
@@ -72,7 +61,7 @@ public class RestaurantController {
         if (!(user instanceof Business)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        Restaurant createdRestaurant = businessService.createRestaurantForBusiness((Business) user, restaurantDTO);
+        Restaurant createdRestaurant = restaurantService.createRestaurant(restaurantDTO, (Business) user);
         RestaurantDTO createdRestaurantDTO = RestaurantDTO.fromEntity(createdRestaurant);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRestaurantDTO);
     }

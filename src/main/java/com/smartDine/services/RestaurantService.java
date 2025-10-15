@@ -39,7 +39,7 @@ public class RestaurantService {
     /**
      * Create a new restaurant
      */
-    public Restaurant createRestaurant(RestaurantDTO restaurantDTO) {
+    public Restaurant createRestaurant(RestaurantDTO restaurantDTO , Business owner) {
         // Validate that restaurant name doesn't already exist
         List<Restaurant> existing = restaurantRepository.findByNameContainingIgnoreCase(restaurantDTO.getName());
         if (!existing.isEmpty()) {
@@ -52,7 +52,7 @@ public class RestaurantService {
         }
         
         Restaurant restaurant = RestaurantDTO.toEntity(restaurantDTO);
-        
+        restaurant.setOwner(owner);
         return restaurantRepository.save(restaurant);
     }
     
@@ -96,7 +96,7 @@ public class RestaurantService {
         return restaurant.getOwner().getId().equals(business.getId());
     }
 
-    public Restaurant createRestaurantForBusiness(Business owner, RestaurantDTO restaurantDTO) {
+    public Restaurant createRestaurant(Business owner, RestaurantDTO restaurantDTO) {
         Restaurant restaurant = RestaurantDTO.toEntity(restaurantDTO);
         restaurant.setOwner(owner);
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);

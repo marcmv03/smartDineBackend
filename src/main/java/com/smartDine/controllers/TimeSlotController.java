@@ -22,6 +22,8 @@ import com.smartDine.entity.TimeSlot;
 import com.smartDine.entity.User;
 import com.smartDine.services.TimeSlotService;
 
+import jakarta.validation.Valid;
+
 
 @RestController
 @RequestMapping("/smartdine/api/restaurants/{restaurantId}")
@@ -31,7 +33,7 @@ public class TimeSlotController {
     
     @PostMapping("/timeslots")
     public ResponseEntity<TimeSlotDTO> postTimeSlot(@PathVariable Long restaurantId,  
-                                            @RequestBody TimeSlotDTO timeSlotDTO,  
+                                            @Valid @RequestBody TimeSlotDTO timeSlotDTO,  
                                             @AuthenticationPrincipal User owner) {
         if (owner.getRole() != Role.ROLE_ADMIN && owner.getRole() != Role.ROLE_BUSINESS) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -44,7 +46,7 @@ public class TimeSlotController {
     }
     
     @GetMapping("/timeslots")
-    public ResponseEntity<List<TimeSlotDTO>> getTimeSlots(@RequestParam Long restaurantId, 
+    public ResponseEntity<List<TimeSlotDTO>> getTimeSlots(@PathVariable Long restaurantId, 
                                 @AuthenticationPrincipal User user,
                                 @RequestParam(name = "day") DayOfWeek dayOfWeek) { 
         List<TimeSlot> timeSlots;

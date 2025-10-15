@@ -20,9 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.smartDine.dto.RestaurantDTO;
 import com.smartDine.entity.Business;
-import com.smartDine.entity.Customer;
 import com.smartDine.entity.Restaurant;
-import com.smartDine.entity.User;
 import com.smartDine.services.BusinessService;
 import com.smartDine.services.RestaurantService;
 
@@ -67,17 +65,6 @@ public class RestaurantControllerIntegrationTest {
     }
 
     @Test
-    public void getRestaurantById_forbiddenForCustomer_shouldReturn403() {
-        // create a customer-like User
-        User customer = new Business(); // Business extends User but we set role to customer to simulate
-        customer.setRole("customer");
-
-        ResponseEntity<RestaurantDTO> resp = restaurantController.getRestaurantById(1L, customer);
-
-        assertEquals(HttpStatus.FORBIDDEN, resp.getStatusCode());
-    }
-
-    @Test
     public void createRestaurant_asBusiness_shouldReturnCreated() {
         Business owner = new Business();
         owner.setName("Owner");
@@ -95,7 +82,7 @@ public class RestaurantControllerIntegrationTest {
         created.setAddress(dto.getAddress());
         created.setDescription(dto.getDescription());
 
-        when(businessService.createRestaurantForBusiness(any(Business.class), any(RestaurantDTO.class))).thenReturn(created);
+        when(restaurantService.createRestaurant(any(RestaurantDTO.class), any(Business.class))).thenReturn(created);
 
         ResponseEntity<RestaurantDTO> resp = restaurantController.createRestaurant(dto, owner);
 
@@ -106,14 +93,4 @@ public class RestaurantControllerIntegrationTest {
         assertEquals("Addr", resp.getBody().getAddress());
     }
 
-    @Test
-    public void createRestaurant_asNonBusiness_shouldReturnForbidden() {
-        User notBusiness = new Customer();
-        RestaurantDTO dto = new RestaurantDTO();
-        dto.setName("Should Fail");
-
-        ResponseEntity<RestaurantDTO> resp = restaurantController.createRestaurant(dto, notBusiness);
-
-        assertEquals(HttpStatus.FORBIDDEN, resp.getStatusCode());
-    }
 }

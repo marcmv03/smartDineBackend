@@ -7,9 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.smartDine.dto.RestaurantDTO;
 import com.smartDine.entity.Business;
-import com.smartDine.entity.Restaurant;
 import com.smartDine.repository.BusinessRepository;
 import com.smartDine.repository.RestaurantRepository;
 
@@ -159,27 +157,5 @@ public class BusinessService {
         return businessRepository.findById(businessId);
     }
 
-    /**
-     * Crea un restaurante y lo asocia al propietario (Business)
-     */
-    public Restaurant createRestaurantForBusiness(Business owner, RestaurantDTO restaurantDTO) {
-        // Validar que el nombre del restaurante no exista ya
-        List<Restaurant> existing = restaurantRepository.findByNameContainingIgnoreCase(restaurantDTO.getName());
-        boolean exactMatch = existing.stream()
-            .anyMatch(r -> r.getName().equalsIgnoreCase(restaurantDTO.getName()));
-        if (exactMatch) {
-            throw new IllegalArgumentException("Ya existe un restaurante con ese nombre");
-        }
-        Restaurant restaurant = RestaurantDTO.toEntity(restaurantDTO);
-        restaurant.setOwner(owner);
-        Restaurant savedRestaurant = restaurantRepository.save(restaurant);
-        List<Restaurant> restaurants = owner.getRestaurants();
-        if (restaurants == null) {
-            restaurants = new java.util.ArrayList<>();
-        }
-        restaurants.add(savedRestaurant);
-        owner.setRestaurants(restaurants);
-        businessRepository.save(owner);
-        return savedRestaurant;
-    }
+    
 }
