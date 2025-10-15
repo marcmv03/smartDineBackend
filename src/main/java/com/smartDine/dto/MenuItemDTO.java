@@ -14,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.PROPERTY,
-        property = "type"
+        property = "itemType"
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = DishDTO.class, name = "DISH"),

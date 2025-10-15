@@ -80,7 +80,6 @@ public class MenuItemControllerTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         
         String jsonContent = "{\n" +
-                "  \"type\": \"DISH\",\n" +
                 "  \"name\": \"Pasta Carbonara\",\n" +
                 "  \"description\": \"Delicious Italian pasta\",\n" +
                 "  \"price\": 15.99,\n" +
@@ -128,7 +127,6 @@ public class MenuItemControllerTest {
     public void testJsonDeserialization() throws Exception {
         // Test específico para verificar la deserialización JSON
         String dishJson = "{\n" +
-                "  \"type\": \"DISH\",\n" +
                 "  \"name\": \"Pasta Carbonara\",\n" +
                 "  \"description\": \"Delicious Italian pasta\",\n" +
                 "  \"price\": 15.99,\n" +
@@ -138,11 +136,11 @@ public class MenuItemControllerTest {
                 "}";
 
         String drinkJson = "{\n" +
-                "  \"type\": \"DRINK\",\n" +
+                "  \"itemType\": \"DRINK\",\n" +
                 "  \"name\": \"Coca Cola\",\n" +
                 "  \"description\": \"Fresh soft drink\",\n" +
                 "  \"price\": 2.50,\n" +
-                "  \"itemType\": \"DRINK\",\n" +
+
                 "  \"drinkType\": \"SOFT_DRINK\"\n" +
                 "}";
 
@@ -186,7 +184,6 @@ public class MenuItemControllerTest {
     public void testMenuItemPolymorphism() throws Exception {
         // Test para verificar que el polimorfismo funciona correctamente
         String dishJson = "{\n" +
-                "  \"type\": \"DISH\",\n" +
                 "  \"name\": \"Test Dish\",\n" +
                 "  \"description\": \"Test Description\",\n" +
                 "  \"price\": 10.00,\n" +

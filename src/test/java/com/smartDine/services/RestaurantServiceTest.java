@@ -54,7 +54,8 @@ public class RestaurantServiceTest {
         restaurantDTO.setName("Test Restaurant");
         restaurantDTO.setAddress("123 Test St");
         restaurantDTO.setDescription("A test restaurant");
-        Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        Restaurant createdRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
+         // Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
         assertNotNull(createdRestaurant);
         assertNotNull(createdRestaurant.getId());
         assertEquals("Test Restaurant", createdRestaurant.getName());
@@ -72,12 +73,12 @@ public class RestaurantServiceTest {
         restaurantDTO1.setName("Duplicate Restaurant");
         restaurantDTO1.setAddress("123 First St");
         restaurantDTO1.setDescription("First restaurant");
-        businessService.createRestaurantForBusiness(owner, restaurantDTO1);
+        restaurantService.createRestaurant(restaurantDTO1, owner);
         RestaurantDTO restaurantDTO2 = new RestaurantDTO();
         restaurantDTO2.setName("Duplicate Restaurant");
         restaurantDTO2.setAddress("456 Second St");
         restaurantDTO2.setDescription("Second restaurant");
-        assertThrows(IllegalArgumentException.class, () -> businessService.createRestaurantForBusiness(owner, restaurantDTO2));
+        assertThrows(IllegalArgumentException.class, () -> restaurantService.createRestaurant(restaurantDTO2, owner));
     }
 
     @Test
@@ -89,7 +90,7 @@ public class RestaurantServiceTest {
         restaurantDTO.setName("Fetch Restaurant");
         restaurantDTO.setAddress("789 Fetch St");
         restaurantDTO.setDescription("A fetch test restaurant");
-        Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        Restaurant createdRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
         Restaurant fetchedRestaurant = restaurantService.getRestaurantById(createdRestaurant.getId());
         assertNotNull(fetchedRestaurant);
         assertEquals(createdRestaurant.getId(), fetchedRestaurant.getId());
@@ -113,7 +114,8 @@ public class RestaurantServiceTest {
         restaurantDTO.setName("Unique Name Restaurant");
         restaurantDTO.setAddress("101 Unique St");
         restaurantDTO.setDescription("A unique name test restaurant");
-        Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        Restaurant createdRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
+         // Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
         Restaurant fetchedRestaurant = restaurantService.getRestaurantById(createdRestaurant.getId());
         assertNotNull(fetchedRestaurant);
         assertEquals(createdRestaurant.getId(), fetchedRestaurant.getId());
@@ -129,7 +131,8 @@ public class RestaurantServiceTest {
         restaurantDTO.setName("Delete Me Restaurant");
         restaurantDTO.setAddress("321 Delete St");
         restaurantDTO.setDescription("A restaurant to be deleted");
-        Restaurant savedRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        Restaurant savedRestaurant = restaurantService.createRestaurant(restaurantDTO, owner);
+         // Restaurant savedRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
         Long restaurantId = savedRestaurant.getId();
         restaurantService.deleteRestaurant(restaurantId);
         assertThrows(IllegalArgumentException.class, () -> {
@@ -152,7 +155,7 @@ public class RestaurantServiceTest {
         restaurantDTO.setName("Original Name");
         restaurantDTO.setAddress("111 Original St");
         restaurantDTO.setDescription("Original description");
-        Restaurant savedRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        Restaurant savedRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
         Long restaurantId = savedRestaurant.getId();
         RestaurantDTO updatedDTO = new RestaurantDTO();
         updatedDTO.setName("Updated Name");
@@ -181,29 +184,6 @@ public class RestaurantServiceTest {
         });
     }
     @Test
-    @DisplayName("Should create a restaurant with owner using BusinessService")
-    void testCreateRestaurantWithOwner() {
-        // Crear un Business (empresa propietaria)
-        Business owner = new Business("EmpresaTest", "empresa@test.com", "password", 123456789L);
-        owner = businessRepository.save(owner);
-        // Crear DTO de restaurante
-        RestaurantDTO restaurantDTO = new RestaurantDTO();
-        restaurantDTO.setName("Restaurante Propietario");
-        restaurantDTO.setAddress("Calle Propietario 1");
-        restaurantDTO.setDescription("Restaurante con owner");
-        // Crear restaurante usando BusinessService
-        Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
-        assertNotNull(createdRestaurant);
-        assertNotNull(createdRestaurant.getId());
-        assertEquals("Restaurante Propietario", createdRestaurant.getName());
-        assertEquals(owner.getId(), createdRestaurant.getOwner().getId());
-        // Verificar que el restaurante está en la lista del owner
-        Business updatedOwner = businessRepository.findById(owner.getId()).orElseThrow();
-        assertNotNull(updatedOwner.getRestaurants());
-        assertEquals(1, updatedOwner.getRestaurants().size());
-        assertEquals(createdRestaurant.getId(), updatedOwner.getRestaurants().get(0).getId());
-    }
-    @Test
     @DisplayName("Should return menu items when restaurant has menu items")
     void testGetMenuItems_WithItems() {
         // Create owner and restaurant
@@ -215,7 +195,7 @@ public class RestaurantServiceTest {
         restaurantDTO.setAddress("456 Menu St");
         restaurantDTO.setDescription("A restaurant to test menu functionality");
         
-        Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        Restaurant createdRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
         
         // Create and add a menu item
         Dish menuItem = new Dish();
@@ -249,7 +229,7 @@ public class RestaurantServiceTest {
         restaurantDTO.setAddress("789 Empty St");
         restaurantDTO.setDescription("A restaurant with no menu items");
         
-        Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        Restaurant createdRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
         
         // Get menu items (should be empty)
         List<MenuItem> menuItems = restaurantService.getMenuItems(createdRestaurant.getId());
