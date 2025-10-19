@@ -10,4 +10,5 @@ import java.util.List;
 public interface TableRepository extends JpaRepository<Table, Long> {
     List<Table> findByRestaurantId(Long restaurantId);
     boolean existsByRestaurantIdAndNumber(Long restaurantId, Integer number);
+    List<Table> findByRestaurantIdAndCapacityGreaterThanEqual(Long restaurantId, Integer capacity);
 }
