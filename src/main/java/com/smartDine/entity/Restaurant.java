@@ -23,7 +23,6 @@ public class Restaurant {
     @Id 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Getter
     @Column(nullable = false)
     private String name;
     @Column(nullable = false)
@@ -39,7 +38,7 @@ public class Restaurant {
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TimeSlot> timeSlots = new ArrayList<>();
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<com.smartDine.entity.Table> tables = new ArrayList<>();
+    private List<com.smartDine.entity.RestaurantTable> tables = new ArrayList<>();
     // Constructors
     public Restaurant() {}
     public Restaurant(String name, String address, String description) {

@@ -1,13 +1,14 @@
 package com.smartDine.dto;
 
-import com.smartDine.entity.Table;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class TableDTO {
+import com.smartDine.entity.RestaurantTable;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
+public class RestaurantTableDTO {
     private Long id;
     
     @NotNull(message = "Table number is required")
@@ -23,9 +24,9 @@ public class TableDTO {
     
     private Long restaurantId;
     
-    public TableDTO() {}
+    public RestaurantTableDTO() {}
     
-    public TableDTO(Integer number, Integer capacity, Boolean outside) {
+    public RestaurantTableDTO(Integer number, Integer capacity, Boolean outside) {
         this.number = number;
         this.capacity = capacity;
         this.outside = outside;
@@ -71,8 +72,8 @@ public class TableDTO {
         this.restaurantId = restaurantId;
     }
     
-    public static Table toEntity(TableDTO dto) {
-        Table table = new Table();
+    public static RestaurantTable toEntity(RestaurantTableDTO dto) {
+        RestaurantTable table = new RestaurantTable();
         if (dto.getId() != null) {
             table.setId(dto.getId());
         }
@@ -82,8 +83,8 @@ public class TableDTO {
         return table;
     }
     
-    public static TableDTO fromEntity(Table table) {
-        TableDTO dto = new TableDTO();
+    public static RestaurantTableDTO fromEntity(RestaurantTable table) {
+        RestaurantTableDTO dto = new RestaurantTableDTO();
         dto.setId(table.getId());
         dto.setNumber(table.getNumber());
         dto.setCapacity(table.getCapacity());
@@ -94,9 +95,9 @@ public class TableDTO {
         return dto;
     }
     
-    public static List<TableDTO> fromEntity(List<Table> tables) {
+    public static List<RestaurantTableDTO> fromEntity(List<RestaurantTable> tables) {
         return tables.stream()
-            .map(TableDTO::fromEntity)
+            .map(RestaurantTableDTO::fromEntity)
             .collect(Collectors.toList());
     }
 }

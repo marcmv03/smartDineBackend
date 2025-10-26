@@ -94,7 +94,6 @@ Edge cases and pitfalls known in this repo
 - `compose.yaml` currently contains no services; do not assume Docker Compose dev services are available (see `Readme.md`).
 - The `User` hierarchy uses `@Inheritance(JOINED)` and `Business` is a subclass — changes to user tables need careful migration considerations.
 - Some controllers check role by calling `user.getRole()` and casting (`(Business) user`). Ensure type checks before casts to avoid ClassCastException.
-- **Entity naming conflicts**: There is a `Table` entity class in `com.smartDine.entity` package. When using JPA's `@Table` annotation, always use fully qualified import `import jakarta.persistence.Table;` to avoid conflicts.
 - **MenuItem hierarchy**: `MenuItem` is an abstract entity with `Dish` and `Drink` as subclasses using `@Inheritance(JOINED)`. When creating menu items, services must determine the subtype and call the appropriate repository.
 - **TimeSlot validation**: `TimeSlotDTO` has a custom `@AssertTrue` validation for `isValidTimeRange()` to ensure startTime < endTime.
 - **Restaurant ownership**: Most restaurant operations require checking if the authenticated `Business` user is the owner via `RestaurantService.isOwnerOfRestaurant()`.
@@ -120,7 +119,39 @@ Service Layer Patterns
 - **BusinessService**: Creates restaurants for business owners, validates email/phone uniqueness.
 - **MenuItemService**: Determines subtype (Dish/Drink) and calls `DishDTO.toEntity()` or `DrinkDTO.toEntity()`.
 - **TimeSlotService**: Uses `TimeSlotDTO.toEntity()`, validates ownership and time slot conflicts.
+- **ReservationService**: Assigns available tables, validates time slot availability and capacity.
+- **TableService**: Creates tables for restaurants, validates ownership and unique table numbers per restaurant.
 - **Pattern**: Services receive DTOs from controllers, convert to entities, perform validation, save, and return entities (controllers then convert back to DTOs).
+
+Transaction Management (CRITICAL)
+- **All service methods that modify database state MUST be annotated with `@Transactional`**
+  - Create, update, delete operations MUST have `@Transactional`
+  - Read-only operations SHOULD have `@Transactional(readOnly = true)` for optimization
+- **Why this is critical**:
+  - Ensures Hibernate session remains active during entity persistence
+  - Properly manages JPA relationships (`@ManyToOne`, `@OneToMany`) 
+  - Prevents `LazyInitializationException` when accessing lazy-loaded collections
+  - Ensures database consistency with automatic rollback on exceptions
+- **Example pattern**:
+  ```java
+  @Service
+  public class YourService {
+      
+      @Transactional  // Required for CREATE/UPDATE/DELETE
+      public Entity createEntity(DTO dto) {
+          Entity entity = DTO.toEntity(dto);
+          entity.setRelatedEntity(relatedEntity); // JPA manages this properly in transaction
+          return repository.save(entity);
+      }
+      
+      @Transactional(readOnly = true)  // Recommended for READ operations
+      public Entity getEntityById(Long id) {
+          return repository.findById(id)
+              .orElseThrow(() -> new IllegalArgumentException("Entity not found"));
+      }
+  }
+  ```
+- **Common pitfall**: Tests may pass without `@Transactional` on service methods if the test class itself has `@Transactional`, but the application will fail in production. Always add `@Transactional` to service methods that modify state.
 
 If blocked or uncertain
 - If a change requires infra (real Postgres, external OAuth client secrets, or CI settings), present a clear list of missing items and a fallback (modify tests to use H2 or mock external calls).

@@ -9,10 +9,10 @@ import com.smartDine.dto.ReservationDTO;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
 import com.smartDine.entity.Restaurant;
-import com.smartDine.entity.Table;
+import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
 import com.smartDine.repository.ReservationRepository;
-import com.smartDine.repository.TableRepository;
+import com.smartDine.repository.RestaurantTableRepository;
 import com.smartDine.repository.TimeSlotRepository;
 
 @Service
@@ -21,13 +21,13 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final RestaurantService restaurantService;
     private final TimeSlotRepository timeSlotRepository;
-    private final TableRepository tableRepository;
+    private final RestaurantTableRepository tableRepository;
 
     public ReservationService(
         ReservationRepository reservationRepository,
         RestaurantService restaurantService,
         TimeSlotRepository timeSlotRepository,
-        TableRepository tableRepository
+        RestaurantTableRepository tableRepository
     ) {
         this.reservationRepository = reservationRepository;
         this.restaurantService = restaurantService;
@@ -37,12 +37,6 @@ public class ReservationService {
 
     @Transactional
     public Reservation createReservation(ReservationDTO reservationDTO, Customer customer) {
-        if (customer == null || customer.getId() == null) {
-            throw new IllegalArgumentException("Customer is required to create a reservation");
-        }
-        if (reservationDTO.getNumCustomers() <= 0) {
-            throw new IllegalArgumentException("Number of customers must be greater than zero");
-        }
 
         Restaurant restaurant = restaurantService.getRestaurantById(reservationDTO.getRestaurantId());
         TimeSlot timeSlot = timeSlotRepository.findById(reservationDTO.getTimeSlotId())
@@ -52,13 +46,13 @@ public class ReservationService {
             throw new IllegalArgumentException("Time slot does not belong to the provided restaurant");
         }
 
-        List<Table> candidateTables = tableRepository.findByRestaurantIdAndCapacityGreaterThanEqual(
+        List<RestaurantTable> candidateTables = tableRepository.findByRestaurantIdAndCapacityGreaterThanEqual(
             restaurant.getId(),
             reservationDTO.getNumCustomers()
         );
 
-        Table availableTable = candidateTables.stream()
-            .filter(table -> !reservationRepository.existsByTableIdAndTimeSlotId(table.getId(), timeSlot.getId()))
+        RestaurantTable availableTable = candidateTables.stream()
+            .filter(table -> !reservationRepository.existsByRestaurantTableIdAndTimeSlotId(table.getId(), timeSlot.getId()))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException("No tables available for the selected time slot"));
 
@@ -66,11 +60,9 @@ public class ReservationService {
         reservation.setCustomer(customer);
         reservation.setRestaurant(restaurant);
         reservation.setTimeSlot(timeSlot);
-        reservation.setTable(availableTable);
-
-        Reservation savedReservation = reservationRepository.save(reservation);
-        customer.getReservations().add(savedReservation);
-        return savedReservation;
+        reservation.setRestaurantTable(availableTable);
+        
+        return reservationRepository.save(reservation);
     }
 
     @Transactional(readOnly = true)

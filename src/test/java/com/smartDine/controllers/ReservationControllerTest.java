@@ -1,18 +1,17 @@
 package com.smartDine.controllers;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-
 import java.time.DayOfWeek;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +21,7 @@ import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
 import com.smartDine.entity.Restaurant;
-import com.smartDine.entity.Table;
+import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
 import com.smartDine.services.CustomerService;
 import com.smartDine.services.ReservationService;
@@ -62,7 +61,7 @@ class ReservationControllerTest {
         timeSlot.setEndTime(14.0);
         timeSlot.setRestaurant(restaurant);
 
-        Table table = new Table();
+        RestaurantTable table = new RestaurantTable();
         table.setId(30L);
         table.setNumber(1);
         table.setCapacity(4);
@@ -74,7 +73,7 @@ class ReservationControllerTest {
         reservation.setCustomer(customer);
         reservation.setRestaurant(restaurant);
         reservation.setTimeSlot(timeSlot);
-        reservation.setTable(table);
+        reservation.setRestaurantTable(table);
         reservation.setNumberOfGuests(2);
     }
 

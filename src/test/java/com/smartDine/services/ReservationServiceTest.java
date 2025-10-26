@@ -1,12 +1,11 @@
 package com.smartDine.services;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import java.time.DayOfWeek;
 import java.util.ArrayList;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,12 +18,12 @@ import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
 import com.smartDine.entity.Restaurant;
-import com.smartDine.entity.Table;
+import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
 import com.smartDine.repository.BusinessRepository;
 import com.smartDine.repository.CustomerRepository;
 import com.smartDine.repository.RestaurantRepository;
-import com.smartDine.repository.TableRepository;
+import com.smartDine.repository.RestaurantTableRepository;
 import com.smartDine.repository.TimeSlotRepository;
 
 import jakarta.transaction.Transactional;
@@ -48,7 +47,7 @@ class ReservationServiceTest {
     private TimeSlotRepository timeSlotRepository;
 
     @Autowired
-    private TableRepository tableRepository;
+    private RestaurantTableRepository tableRepository;
 
     @Autowired
     private CustomerRepository customerRepository;
@@ -59,7 +58,7 @@ class ReservationServiceTest {
         Business owner = createBusiness("Owner", "owner@smartdine.com", 111111111L);
         Restaurant restaurant = createRestaurant(owner, "Owner Restaurant");
         TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
-        Table table = createTable(restaurant, 1, 4);
+        RestaurantTable table = createTable(restaurant, 1, 4);
         Customer customer = createCustomer("Alice", "alice@smartdine.com", 222222222L);
 
         ReservationDTO dto = new ReservationDTO();
@@ -68,11 +67,13 @@ class ReservationServiceTest {
         dto.setNumCustomers(2);
 
         Reservation reservation = reservationService.createReservation(dto, customer);
-
+        RestaurantTable table_2 = reservation.getRestaurantTable();
         assertNotNull(reservation.getId());
         assertEquals(timeSlot.getId(), reservation.getTimeSlot().getId());
-        assertEquals(table.getId(), reservation.getTable().getId());
+        assertEquals(table.getId(), reservation.getRestaurantTable().getId());
         assertEquals(2, reservation.getNumberOfGuests());
+        assertEquals(reservation.getCustomer().getId(), customer.getId());
+        assertEquals(reservation.getRestaurantTable().getId(), table_2.getId());
     }
 
     @Test
@@ -154,8 +155,8 @@ class ReservationServiceTest {
         return timeSlotRepository.save(timeSlot);
     }
 
-    private Table createTable(Restaurant restaurant, int number, int capacity) {
-        Table table = new Table();
+    private RestaurantTable createTable(Restaurant restaurant, int number, int capacity) {
+        RestaurantTable table = new RestaurantTable();
         table.setRestaurant(restaurant);
         table.setNumber(number);
         table.setCapacity(capacity);

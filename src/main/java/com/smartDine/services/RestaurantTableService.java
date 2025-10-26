@@ -6,22 +6,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.smartDine.dto.TableDTO;
+import com.smartDine.dto.RestaurantTableDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Restaurant;
-import com.smartDine.entity.Table;
-import com.smartDine.repository.TableRepository;
+import com.smartDine.entity.RestaurantTable;
+import com.smartDine.repository.RestaurantTableRepository;
 
 @Service
-public class TableService {
+public class RestaurantTableService {
     @Autowired
-    private TableRepository tableRepository;
+    private RestaurantTableRepository tableRepository;
     
     @Autowired
     private RestaurantService restaurantService;
     
     @Transactional
-    public Table createTable(Long restaurantId, TableDTO tableDTO, Business business) {
+    public RestaurantTable createTable(Long restaurantId, RestaurantTableDTO tableDTO, Business business) {
         if (business == null || business.getId() == null) {
             throw new IllegalArgumentException("Business owner is required to create a table");
         }
@@ -41,11 +41,11 @@ public class TableService {
         }
         
         // Create the table entity from DTO
-        Table table = TableDTO.toEntity(tableDTO);
+        RestaurantTable table = RestaurantTableDTO.toEntity(tableDTO);
         table.setRestaurant(restaurant);
         
         // Save the table
-        Table savedTable = tableRepository.save(table);
+        RestaurantTable savedTable = tableRepository.save(table);
         
         // Add the table to the restaurant's list
         restaurantService.addTable(restaurantId, savedTable);
@@ -54,7 +54,7 @@ public class TableService {
     }
     
     @Transactional(readOnly = true)
-    public List<Table> getTablesByRestaurant(Long restaurantId, Business business) {
+    public List<RestaurantTable> getTablesByRestaurant(Long restaurantId, Business business) {
         if (business == null || business.getId() == null) {
             throw new IllegalArgumentException("Business owner is required to get tables");
         }

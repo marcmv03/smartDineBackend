@@ -8,14 +8,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 @Entity
-@jakarta.persistence.Table(name = "tables")
-public class Table {
+@Table(name = "restaurant_tables")
+public class RestaurantTable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -33,9 +34,9 @@ public class Table {
     @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
     
-    public Table() {}
+    public RestaurantTable() {}
     
-    public Table(Integer number, Integer capacity, Boolean outside) {
+    public RestaurantTable(Integer number, Integer capacity, Boolean outside) {
         this.number = number;
         this.capacity = capacity;
         this.outside = outside;

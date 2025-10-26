@@ -20,6 +20,7 @@ public class ReservationDTO {
     private Long tableId;
     private Long customerId;
 
+    @NotNull(message = "Number of customers is required")
     @Min(value = 1, message = "Number of customers must be at least 1")
     private int numCustomers;
 
@@ -93,8 +94,8 @@ public class ReservationDTO {
         if (reservation.getRestaurant() != null) {
             dto.setRestaurantId(reservation.getRestaurant().getId());
         }
-        if (reservation.getTable() != null) {
-            dto.setTableId(reservation.getTable().getId());
+        if (reservation.getRestaurantTable() != null) {
+            dto.setTableId(reservation.getRestaurantTable().getId());
         }
         if (reservation.getCustomer() != null) {
             dto.setCustomerId(reservation.getCustomer().getId());

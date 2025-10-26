@@ -35,7 +35,7 @@ public class Reservation {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id", nullable = false)
-    private Table table;
+    private RestaurantTable  restaurantTable;
 
     @Column(name = "number_of_guests", nullable = false)
     private int numberOfGuests;

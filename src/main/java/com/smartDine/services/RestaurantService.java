@@ -9,6 +9,7 @@ import com.smartDine.dto.RestaurantDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.MenuItem;
 import com.smartDine.entity.Restaurant;
+import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
 import com.smartDine.repository.RestaurantRepository;
 
@@ -147,10 +148,10 @@ public class RestaurantService {
         return restaurant.getTimeSlots();
     }
     
-    public boolean addTable(Long restaurantId, com.smartDine.entity.Table table) {
+    public boolean addTable(Long restaurantId, com.smartDine.entity.RestaurantTable table) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
             .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
-        List<com.smartDine.entity.Table> tables = restaurant.getTables();
+        List<com.smartDine.entity.RestaurantTable> tables = restaurant.getTables();
         if (tables == null) {
             tables = new java.util.ArrayList<>();
         }
@@ -160,7 +161,7 @@ public class RestaurantService {
         return true;
     }
     
-    public List<com.smartDine.entity.Table> getTables(Long restaurantId) {
+    public List<RestaurantTable> getTables(Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
             .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
         return restaurant.getTables();
