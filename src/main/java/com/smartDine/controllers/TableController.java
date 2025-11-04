@@ -1,5 +1,6 @@
 package com.smartDine.controllers;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.smartDine.dto.RestaurantTableDTO;
@@ -21,6 +23,7 @@ import com.smartDine.entity.User;
 import com.smartDine.services.RestaurantTableService;
 
 import jakarta.validation.Valid;
+
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -68,6 +71,13 @@ public class TableController {
     /**
      * GET /smartdine/api/restaurants/{restaurantId}/tables - Get all tables for a restaurant
      */
+    @GetMapping
+    public ResponseEntity<List<RestaurantTableDTO>> getAvaliableTables(@PathVariable Long  restaurantId, @RequestParam LocalDate date,@RequestParam Long  timeSlot, @RequestParam Boolean outside)  {
+         List<RestaurantTableDTO> avaliableTables = tableService.getAvailableTables(restaurantId, timeSlot, date, outside) ;
+         return ResponseEntity.ok(avaliableTables);
+
+    }
+    
     @GetMapping
     public ResponseEntity<List<RestaurantTableDTO>> getRestaurantTables(
             @PathVariable Long restaurantId,

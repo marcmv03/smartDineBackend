@@ -1,6 +1,8 @@
 package com.smartDine.services;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -8,8 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.smartDine.dto.RestaurantTableDTO;
 import com.smartDine.entity.Business;
+import com.smartDine.entity.Reservation;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
+import com.smartDine.repository.ReservationRepository;
 import com.smartDine.repository.RestaurantTableRepository;
 
 @Service
@@ -19,6 +23,9 @@ public class RestaurantTableService {
     
     @Autowired
     private RestaurantService restaurantService;
+
+    @Autowired
+    private ReservationRepository reservationRepository; // ← Cambiado de ReservationService a ReservationRepository
     
     @Transactional
     public RestaurantTable createTable(Long restaurantId, RestaurantTableDTO tableDTO, Business business) {
@@ -68,5 +75,44 @@ public class RestaurantTableService {
         }
         
         return restaurantService.getTables(restaurantId);
+    }
+    
+    @Transactional(readOnly = true) 
+    public List<RestaurantTableDTO> getAvailableTables(Long restaurantId, Long timeSlotId, LocalDate date, Boolean outside) {
+        // Get all tables for the restaurant
+        List<RestaurantTable> restaurantTables = restaurantService.getTables(restaurantId);
+        
+        // Get all reservations for the given date and time slot using repository directly
+        List<Reservation> reservations = reservationRepository.findByRestaurantIdAndDateAndTimeSlotId(
+            restaurantId, 
+            date, 
+            timeSlotId
+        );
+        
+        // Filter available tables
+        List<RestaurantTable> availableTables = restaurantTables.stream()
+            .filter(table -> {
+                // Check if table matches outside/inside preference
+                if (!table.getOutside().equals(outside)) {
+                    return false;
+                }
+                
+                // Check if table is not reserved
+                boolean isReserved = reservations.stream()
+                    .anyMatch(reservation -> 
+                        reservation.getRestaurantTable().getId().equals(table.getId())
+                    );
+                
+                return !isReserved;
+            })
+            .collect(Collectors.toList());
+        
+        return RestaurantTableDTO.fromEntity(availableTables);
+    }
+    
+    @Transactional(readOnly = true)
+    public RestaurantTable getTableById(Long tableId) {
+        return tableRepository.findById(tableId)
+            .orElseThrow(() -> new IllegalArgumentException("Table not found with id: " + tableId));
     }
 }

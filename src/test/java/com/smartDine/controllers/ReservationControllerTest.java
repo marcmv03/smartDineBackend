@@ -74,7 +74,7 @@ class ReservationControllerTest {
         reservation.setRestaurant(restaurant);
         reservation.setTimeSlot(timeSlot);
         reservation.setRestaurantTable(table);
-        reservation.setNumberOfGuests(2);
+        reservation.setNumGuests(2);
     }
 
     @Test

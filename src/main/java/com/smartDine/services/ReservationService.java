@@ -12,7 +12,6 @@ import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
 import com.smartDine.repository.ReservationRepository;
-import com.smartDine.repository.RestaurantTableRepository;
 import com.smartDine.repository.TimeSlotRepository;
 
 @Service
@@ -21,18 +20,18 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final RestaurantService restaurantService;
     private final TimeSlotRepository timeSlotRepository;
-    private final RestaurantTableRepository tableRepository;
+    private final RestaurantTableService restaurantTableService;
 
     public ReservationService(
         ReservationRepository reservationRepository,
         RestaurantService restaurantService,
         TimeSlotRepository timeSlotRepository,
-        RestaurantTableRepository tableRepository
+        RestaurantTableService restaurantTableService
     ) {
         this.reservationRepository = reservationRepository;
         this.restaurantService = restaurantService;
         this.timeSlotRepository = timeSlotRepository;
-        this.tableRepository = tableRepository;
+        this.restaurantTableService = restaurantTableService;
     }
 
     @Transactional
@@ -46,15 +45,8 @@ public class ReservationService {
             throw new IllegalArgumentException("Time slot does not belong to the provided restaurant");
         }
 
-        List<RestaurantTable> candidateTables = tableRepository.findByRestaurantIdAndCapacityGreaterThanEqual(
-            restaurant.getId(),
-            reservationDTO.getNumCustomers()
-        );
-
-        RestaurantTable availableTable = candidateTables.stream()
-            .filter(table -> !reservationRepository.existsByRestaurantTableIdAndTimeSlotId(table.getId(), timeSlot.getId()))
-            .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("No tables available for the selected time slot"));
+       RestaurantTable availableTable  = restaurantTableService.getTableById(reservationDTO.getTableId());
+    
 
         Reservation reservation = ReservationDTO.toEntity(reservationDTO);
         reservation.setCustomer(customer);
@@ -68,5 +60,9 @@ public class ReservationService {
     @Transactional(readOnly = true)
     public List<Reservation> getReservationsForCustomer(Long customerId) {
         return reservationRepository.findByCustomerId(customerId);
+    }
+    @Transactional(readOnly = true)
+    public List<Reservation> getReservationsByRestaurantAndDateAndTimeSlot(Long restaurantId, java.time.LocalDate date, Long timeSlotId) {
+        return reservationRepository.findByRestaurantIdAndDateAndTimeSlotId(restaurantId, date, timeSlotId);
     }
 }

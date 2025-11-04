@@ -1,5 +1,7 @@
 package com.smartDine.entity;
 
+import java.time.LocalDate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -38,5 +40,11 @@ public class Reservation {
     private RestaurantTable  restaurantTable;
 
     @Column(name = "number_of_guests", nullable = false)
-    private int numberOfGuests;
+    private int numGuests;
+
+    @Column(name = "date", nullable = false)
+    private LocalDate date;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDate createdAt;
 }
