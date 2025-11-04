@@ -117,7 +117,11 @@ public class ReservationDTO {
             .collect(Collectors.toList());
     }
 
-    private void setDate(LocalDate date) {
+    public void setDate(LocalDate date) {
         this.date = date;
+    }
+
+    public LocalDate getDate() {
+        return date;
     }
 }

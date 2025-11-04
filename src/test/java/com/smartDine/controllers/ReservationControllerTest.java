@@ -1,6 +1,7 @@
 package com.smartDine.controllers;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,9 +41,12 @@ class ReservationControllerTest {
 
     private Customer customer;
     private Reservation reservation;
+    private LocalDate reservationDate;
 
     @BeforeEach
     void setUp() {
+        reservationDate = LocalDate.now().plusDays(1);
+        
         customer = new Customer();
         customer.setId(1L);
         customer.setEmail("customer@smartdine.com");
@@ -75,6 +79,8 @@ class ReservationControllerTest {
         reservation.setTimeSlot(timeSlot);
         reservation.setRestaurantTable(table);
         reservation.setNumGuests(2);
+        reservation.setDate(reservationDate);
+        reservation.setCreatedAt(LocalDate.now());
     }
 
     @Test
@@ -82,7 +88,9 @@ class ReservationControllerTest {
         ReservationDTO request = new ReservationDTO();
         request.setRestaurantId(10L);
         request.setTimeSlotId(20L);
+        request.setTableId(30L);
         request.setNumCustomers(2);
+        request.setDate(reservationDate);
 
         when(customerService.getCustomerById(1L)).thenReturn(customer);
         when(reservationService.createReservation(eq(request), eq(customer))).thenReturn(reservation);
@@ -96,6 +104,7 @@ class ReservationControllerTest {
         assertEquals(20L, response.getBody().getTimeSlotId());
         assertEquals(30L, response.getBody().getTableId());
         assertEquals(2, response.getBody().getNumCustomers());
+        assertEquals(reservationDate, response.getBody().getDate());
     }
 
     @Test
@@ -120,6 +129,7 @@ class ReservationControllerTest {
         ReservationDTO dto = response.getBody().get(0);
         assertEquals(40L, dto.getId());
         assertEquals(30L, dto.getTableId());
+        assertEquals(reservationDate, dto.getDate());
     }
 
     @Test

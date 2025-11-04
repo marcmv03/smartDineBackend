@@ -71,7 +71,7 @@ public class TableController {
     /**
      * GET /smartdine/api/restaurants/{restaurantId}/tables - Get all tables for a restaurant
      */
-    @GetMapping
+    @GetMapping("/available")
     public ResponseEntity<List<RestaurantTableDTO>> getAvaliableTables(@PathVariable Long  restaurantId, @RequestParam LocalDate date,@RequestParam Long  timeSlot, @RequestParam Boolean outside)  {
          List<RestaurantTableDTO> avaliableTables = tableService.getAvailableTables(restaurantId, timeSlot, date, outside) ;
          return ResponseEntity.ok(avaliableTables);
