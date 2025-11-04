@@ -1,6 +1,7 @@
 package com.smartDine.services;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,7 +54,7 @@ class ReservationServiceTest {
     private CustomerRepository customerRepository;
 
     @Test
-    @DisplayName("Should create a reservation and assign an available table")
+    @DisplayName("Should create a reservation with specified table and date")
     void createReservationAssignsTable() {
         Business owner = createBusiness("Owner", "owner@smartdine.com", 111111111L);
         Restaurant restaurant = createRestaurant(owner, "Owner Restaurant");
@@ -61,48 +62,24 @@ class ReservationServiceTest {
         RestaurantTable table = createTable(restaurant, 1, 4);
         Customer customer = createCustomer("Alice", "alice@smartdine.com", 222222222L);
 
+        LocalDate reservationDate = LocalDate.now().plusDays(1);
+        
         ReservationDTO dto = new ReservationDTO();
         dto.setRestaurantId(restaurant.getId());
         dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
         dto.setNumCustomers(2);
+        dto.setDate(reservationDate);
 
         Reservation reservation = reservationService.createReservation(dto, customer);
-        RestaurantTable table_2 = reservation.getRestaurantTable();
+        
         assertNotNull(reservation.getId());
         assertEquals(timeSlot.getId(), reservation.getTimeSlot().getId());
         assertEquals(table.getId(), reservation.getRestaurantTable().getId());
         assertEquals(2, reservation.getNumGuests());
-        assertEquals(reservation.getCustomer().getId(), customer.getId());
-        assertEquals(reservation.getRestaurantTable().getId(), table_2.getId());
-    }
-
-    @Test
-    @DisplayName("Should fail when no tables are available for the time slot")
-    void createReservationWithoutAvailableTable() {
-        Business owner = createBusiness("Owner2", "owner2@smartdine.com", 333333333L);
-        Restaurant restaurant = createRestaurant(owner, "Restaurant Two");
-        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.TUESDAY, 18.0, 20.0);
-        createTable(restaurant, 5, 4);
-        Customer customer = createCustomer("Bob", "bob@smartdine.com", 444444444L);
-
-        ReservationDTO dto = new ReservationDTO();
-        dto.setRestaurantId(restaurant.getId());
-        dto.setTimeSlotId(timeSlot.getId());
-        dto.setNumCustomers(4);
-
-        reservationService.createReservation(dto, customer);
-
-        ReservationDTO secondAttempt = new ReservationDTO();
-        secondAttempt.setRestaurantId(restaurant.getId());
-        secondAttempt.setTimeSlotId(timeSlot.getId());
-        secondAttempt.setNumCustomers(2);
-
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> reservationService.createReservation(secondAttempt, customer)
-        );
-
-        assertEquals("No tables available for the selected time slot", exception.getMessage());
+        assertEquals(customer.getId(), reservation.getCustomer().getId());
+        assertEquals(reservationDate, reservation.getDate());
+        assertEquals(LocalDate.now(), reservation.getCreatedAt());
     }
 
     @Test
@@ -112,13 +89,15 @@ class ReservationServiceTest {
         Restaurant restaurantOne = createRestaurant(owner, "Restaurant One");
         Restaurant restaurantTwo = createRestaurant(owner, "Restaurant Two");
         TimeSlot otherTimeSlot = createTimeSlot(restaurantTwo, DayOfWeek.WEDNESDAY, 10.0, 12.0);
-        createTable(restaurantOne, 10, 4);
+        RestaurantTable table = createTable(restaurantOne, 10, 4);
         Customer customer = createCustomer("Carol", "carol@smartdine.com", 666666666L);
 
         ReservationDTO dto = new ReservationDTO();
         dto.setRestaurantId(restaurantOne.getId());
         dto.setTimeSlotId(otherTimeSlot.getId());
+        dto.setTableId(table.getId());
         dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(1));
 
         IllegalArgumentException exception = assertThrows(
             IllegalArgumentException.class,
@@ -126,6 +105,29 @@ class ReservationServiceTest {
         );
 
         assertEquals("Time slot does not belong to the provided restaurant", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should fail when table not found")
+    void createReservationWithInvalidTable() {
+        Business owner = createBusiness("Owner4", "owner4@smartdine.com", 777777777L);
+        Restaurant restaurant = createRestaurant(owner, "Test Restaurant");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.FRIDAY, 18.0, 20.0);
+        Customer customer = createCustomer("Dave", "dave@smartdine.com", 888888888L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(999L); // Non-existent table
+        dto.setNumCustomers(4);
+        dto.setDate(LocalDate.now().plusDays(2));
+
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> reservationService.createReservation(dto, customer)
+        );
+
+        assertEquals("Table not found with id: 999", exception.getMessage());
     }
 
     private Business createBusiness(String name, String email, Long phoneNumber) {

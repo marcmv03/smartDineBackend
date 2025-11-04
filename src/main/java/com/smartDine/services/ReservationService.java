@@ -1,5 +1,6 @@
 package com.smartDine.services;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -53,6 +54,9 @@ public class ReservationService {
         reservation.setRestaurant(restaurant);
         reservation.setTimeSlot(timeSlot);
         reservation.setRestaurantTable(availableTable);
+        reservation.setDate(reservationDTO.getDate());
+        reservation.setNumGuests(reservationDTO.getNumCustomers());
+        reservation.setCreatedAt(LocalDate.now());
         
         return reservationRepository.save(reservation);
     }
