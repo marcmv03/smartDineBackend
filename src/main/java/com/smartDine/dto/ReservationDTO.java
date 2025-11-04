@@ -1,5 +1,6 @@
 package com.smartDine.dto;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,13 +17,17 @@ public class ReservationDTO {
 
     @NotNull(message = "Restaurant is required")
     private Long restaurantId;
-
+    @NotNull(message = "Table is required")
+    @Min(value = 1, message = "Table ID must be positive")
     private Long tableId;
     private Long customerId;
 
     @NotNull(message = "Number of customers is required")
     @Min(value = 1, message = "Number of customers must be at least 1")
     private int numCustomers;
+
+    @NotNull(message = "Reservation date is required")
+    private LocalDate date;
 
     public ReservationDTO() {
     }
@@ -80,14 +85,14 @@ public class ReservationDTO {
         if (dto.getId() != null) {
             reservation.setId(dto.getId());
         }
-        reservation.setNumberOfGuests(dto.getNumCustomers());
+        reservation.setNumGuests(dto.getNumCustomers());
         return reservation;
     }
 
     public static ReservationDTO fromEntity(Reservation reservation) {
         ReservationDTO dto = new ReservationDTO();
         dto.setId(reservation.getId());
-        dto.setNumCustomers(reservation.getNumberOfGuests());
+        dto.setNumCustomers(reservation.getNumGuests());
         if (reservation.getTimeSlot() != null) {
             dto.setTimeSlotId(reservation.getTimeSlot().getId());
         }
@@ -100,6 +105,9 @@ public class ReservationDTO {
         if (reservation.getCustomer() != null) {
             dto.setCustomerId(reservation.getCustomer().getId());
         }
+        if(reservation.getDate() != null) {
+            dto.setDate(reservation.getDate());
+        }
         return dto;
     }
 
@@ -107,5 +115,9 @@ public class ReservationDTO {
         return reservations.stream()
             .map(ReservationDTO::fromEntity)
             .collect(Collectors.toList());
+    }
+
+    private void setDate(LocalDate date) {
+        this.date = date;
     }
 }

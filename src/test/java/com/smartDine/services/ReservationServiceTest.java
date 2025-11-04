@@ -71,7 +71,7 @@ class ReservationServiceTest {
         assertNotNull(reservation.getId());
         assertEquals(timeSlot.getId(), reservation.getTimeSlot().getId());
         assertEquals(table.getId(), reservation.getRestaurantTable().getId());
-        assertEquals(2, reservation.getNumberOfGuests());
+        assertEquals(2, reservation.getNumGuests());
         assertEquals(reservation.getCustomer().getId(), customer.getId());
         assertEquals(reservation.getRestaurantTable().getId(), table_2.getId());
     }

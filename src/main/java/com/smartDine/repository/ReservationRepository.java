@@ -15,10 +15,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByCustomerId(Long customerId);
     
     // Usar el nombre correcto de la columna: table_id
-    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM Reservation r " +
-           "WHERE r.restaurantTable.id = :tableId AND r.timeSlot.id = :timeSlotId")
-    boolean existsByRestaurantTableIdAndTimeSlotId(
-        @Param("tableId") Long tableId, 
+    @Query("SELECT r FROM Reservation r WHERE r.restaurant.id = :restaurantId AND r.date = :date AND r.timeSlot.id = :timeSlotId")
+    List<Reservation> findByRestaurantIdAndDateAndTimeSlotId(
+        @Param("restaurantId") Long restaurantId,
+        @Param("date") java.time.LocalDate date,
         @Param("timeSlotId") Long timeSlotId
     );
 }
