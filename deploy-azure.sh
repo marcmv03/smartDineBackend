@@ -38,23 +38,6 @@ fi
 # Step 1: Check prerequisites
 echo "Step 1: Checking prerequisites..."
 
-if ! command -v docker &> /dev/null; then
-    print_error "Docker is not installed. Please install Docker first."
-    exit 1
-fi
-print_success "Docker is installed"
-
-# Check for docker compose (new) or docker-compose (old)
-if docker compose version &> /dev/null; then
-    print_success "Docker Compose is installed (docker compose)"
-    DOCKER_COMPOSE="docker compose"
-elif command -v docker-compose &> /dev/null; then
-    print_success "Docker Compose is installed (docker-compose)"
-    DOCKER_COMPOSE="docker-compose"
-else
-    print_error "Docker Compose is not installed. Please install Docker Compose first."
-    exit 1
-fi
 
 # Step 2: Check if .env file exists
 echo ""
