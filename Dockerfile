@@ -14,6 +14,9 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Copy the JAR from build stage
 COPY --from=build /app/target/*.jar app.jar
 
@@ -26,9 +29,9 @@ EXPOSE 8080 8443
 # Set environment variables (can be overridden by docker-compose)
 ENV SPRING_PROFILES_ACTIVE=prod
 
-# Health check using HTTPS
+# Health check using HTTPS with curl
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider --no-check-certificate https://localhost:8443/actuator/health || exit 1
+  CMD curl -f -k https://localhost:8443/actuator/health || exit 1
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]

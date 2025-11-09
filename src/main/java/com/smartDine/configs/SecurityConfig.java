@@ -35,6 +35,7 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/smartdine/api/auth/**").permitAll()
+                        .requestMatchers("/actuator/health/**").permitAll() // Health check endpoint
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/smartdine/api/me").authenticated()
