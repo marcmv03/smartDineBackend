@@ -17,15 +17,18 @@ WORKDIR /app
 # Copy the JAR from build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose port
-EXPOSE 8080
+# Copy SSL certificate from resources
+COPY src/main/resources/smartdine.p12 /app/keystore/smartdine.p12
+
+# Expose ports (8080 for HTTP, 8443 for HTTPS)
+EXPOSE 8080 8443
 
 # Set environment variables (can be overridden by docker-compose)
 ENV SPRING_PROFILES_ACTIVE=prod
 
-# Health check
+# Health check using HTTPS
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider --no-check-certificate https://localhost:8443/actuator/health || exit 1
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
