@@ -3,16 +3,18 @@ version: '3.8'
 services:
   # PostgreSQL Database Service
   postgres:
-    image: postgres:17.6-alpine
-    container_name: smartdine-postgres
+    env_file:
+      - .env
+    image: ${POSTGRES_IMAGE:-postgres:17.6-alpine}
+    container_name: ${POSTGRES_CONTAINER_NAME:-smartdine-postgres}
     restart: unless-stopped
     environment:
-      POSTGRES_DB: smartDine
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: mV00R152
-      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: ${POSTGRES_DB:-smartDine}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mV00R152}
+      PGDATA: ${PGDATA:-/var/lib/postgresql/data/pgdata}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -31,19 +33,21 @@ services:
       dockerfile: Dockerfile
     container_name: smartdine-backend
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
     environment:
-      SPRING_APPLICATION_NAME: smartDine
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/smartDine
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: mV00R152
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_JPA_SHOW_SQL: "true"
-      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
-      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: "true"
-      SECURITY_JWT_SECRET_KEY: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-      SECURITY_JWT_EXPIRATION_TIME: 3600000
+      SPRING_APPLICATION_NAME: ${SPRING_APPLICATION_NAME:-smartDine}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/${POSTGRES_DB:-smartDine}}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-mV00R152}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL:-"true"}
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:-org.hibernate.dialect.PostgreSQLDialect}
+      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: ${SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL:-"true"}
+      SECURITY_JWT_SECRET_KEY: ${SECURITY_JWT_SECRET_KEY:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      SECURITY_JWT_EXPIRATION_TIME: ${SECURITY_JWT_EXPIRATION_TIME:-3600000}
     depends_on:
       postgres:
         condition: service_healthy
