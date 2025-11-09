@@ -61,11 +61,33 @@ docker-compose ps
 
 ## Service Access
 
-- **REST API**: http://localhost:8080
+- **REST API (HTTP)**: http://localhost:8080
+- **REST API (HTTPS)**: https://localhost:8443 ⭐ **Recommended for production**
 - **PostgreSQL**: localhost:5432
   - Database: `smartDine`
   - Username: `postgres`
   - Password: `mV00R152`
+
+### SSL/HTTPS Configuration
+
+The application is configured to use HTTPS with a self-signed certificate:
+
+- **Certificate**: `src/main/resources/smartdine.p12` (PKCS12 format)
+- **Certificate password**: `mV00R152`
+- **Alias**: `smartdine`
+- **Protocol**: TLS 1.2 and TLS 1.3
+
+When accessing via HTTPS, your browser will warn about the self-signed certificate. For production, replace with a valid certificate from a trusted CA.
+
+**Test HTTPS connection**:
+
+```bash
+# Using curl (ignoring self-signed certificate)
+curl -k https://localhost:8443/actuator/health
+
+# Using wget
+wget --no-check-certificate https://localhost:8443/actuator/health
+```
 
 ## Connect to PostgreSQL from host
 
@@ -116,14 +138,27 @@ docker-compose up -d --build
 
 ## Environment Variables
 
-Environment variables are configured in `compose.yaml`:
+Environment variables can be configured in two ways:
 
+1. **Using `.env` file** (recommended):
+   - Copy `.env.example` to `.env`
+   - Modify values as needed
+   - Docker Compose will automatically load these variables
+
+2. **Directly in `compose.yaml`**:
+   - Edit the `environment` section of each service
+
+### Key environment variables:
+
+- `APP_PORT`: HTTP port (default: 8080)
+- `APP_HTTPS_PORT`: HTTPS port (default: 8443)
 - `SPRING_DATASOURCE_URL`: PostgreSQL connection URL
 - `SPRING_DATASOURCE_USERNAME`: Database username
 - `SPRING_DATASOURCE_PASSWORD`: Database password
 - `SPRING_JPA_HIBERNATE_DDL_AUTO`: Schema update mode (update)
 - `SECURITY_JWT_SECRET_KEY`: JWT secret key
 - `SECURITY_JWT_EXPIRATION_TIME`: Token expiration time in milliseconds
+- `SSL_KEY_STORE_PASSWORD`: SSL certificate password
 
 ## Data Persistence
 
@@ -142,11 +177,41 @@ Both services are on the `smartdine-network` network, allowing them to communica
 
 ## Production Notes
 
-⚠️ **Do not use this configuration in production without changes**:
+⚠️ **Security checklist for production deployment**:
 
-1. Change database credentials
-2. Use Docker secrets for passwords
-3. Configure HTTPS/SSL
-4. Limit port exposure
-5. Use specific image versions (not `latest`)
-6. Configure automatic database backups
+1. **Replace the self-signed certificate**:
+   - Obtain a valid SSL certificate from a trusted CA (Let's Encrypt, DigiCert, etc.)
+   - Replace `src/main/resources/smartdine.p12` with your production certificate
+   - Update `SSL_KEY_STORE_PASSWORD` environment variable
+
+2. **Change database credentials**:
+   - Use strong, unique passwords
+   - Store credentials in Docker secrets or environment variables
+
+3. **Secure JWT configuration**:
+   - Generate a new, random `SECURITY_JWT_SECRET_KEY`
+   - Use at least 256 bits of entropy
+
+4. **Limit port exposure**:
+   - Consider removing HTTP port (8080) exposure if using HTTPS only
+   - Use a reverse proxy (nginx, traefik) for additional security
+
+5. **Use specific image versions**:
+   - Pin PostgreSQL version (e.g., `postgres:17.6-alpine`)
+   - Tag your Spring Boot image with version numbers
+
+6. **Configure database backups**:
+   - Set up automated PostgreSQL backups
+   - Test restore procedures
+
+7. **Additional security measures**:
+   - Enable Spring Security CSRF protection if needed
+   - Configure CORS properly for your frontend domain
+   - Use HTTPS-only cookies for JWT tokens
+   - Implement rate limiting
+   - Enable Docker security scanning
+
+8. **Monitoring and logging**:
+   - Configure centralized logging (ELK, Splunk, etc.)
+   - Set up health check monitoring
+   - Enable Spring Boot Actuator endpoints securely

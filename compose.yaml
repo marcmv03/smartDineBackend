@@ -36,7 +36,8 @@ services:
     env_file:
       - .env
     ports:
-      - "${APP_PORT:-8080}:8080"
+      - "${APP_PORT:-8080}:8080"     # HTTP port (optional, for backward compatibility)
+      - "${APP_HTTPS_PORT:-8443}:8443"  # HTTPS port
     environment:
       SPRING_APPLICATION_NAME: ${SPRING_APPLICATION_NAME:-smartDine}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/${POSTGRES_DB:-smartDine}}
@@ -48,11 +49,18 @@ services:
       SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: ${SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL:-"true"}
       SECURITY_JWT_SECRET_KEY: ${SECURITY_JWT_SECRET_KEY:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
       SECURITY_JWT_EXPIRATION_TIME: ${SECURITY_JWT_EXPIRATION_TIME:-3600000}
+      SSL_KEY_STORE_PASSWORD: ${SSL_KEY_STORE_PASSWORD:-mV00R152}
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - smartdine-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-check-certificate", "-q", "--spider", "https://localhost:8443/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 volumes:
   postgres-data:
