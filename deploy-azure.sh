@@ -44,11 +44,17 @@ if ! command -v docker &> /dev/null; then
 fi
 print_success "Docker is installed"
 
-if ! command -v docker-compose &> /dev/null; then
+# Check for docker compose (new) or docker-compose (old)
+if docker compose version &> /dev/null; then
+    print_success "Docker Compose is installed (docker compose)"
+    DOCKER_COMPOSE="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    print_success "Docker Compose is installed (docker-compose)"
+    DOCKER_COMPOSE="docker-compose"
+else
     print_error "Docker Compose is not installed. Please install Docker Compose first."
     exit 1
 fi
-print_success "Docker Compose is installed"
 
 # Step 2: Check if .env file exists
 echo ""
@@ -102,8 +108,8 @@ fi
 echo ""
 echo "Step 5: Stopping existing containers (if any)..."
 
-if docker-compose ps | grep -q "Up"; then
-    docker-compose down
+if $DOCKER_COMPOSE ps | grep -q "Up"; then
+    $DOCKER_COMPOSE down
     print_success "Stopped existing containers"
 else
     print_success "No running containers found"
@@ -123,7 +129,7 @@ echo ""
 echo "Step 7: Building and starting containers..."
 echo "This may take several minutes..."
 
-if docker-compose up -d --build; then
+if $DOCKER_COMPOSE up -d --build; then
     print_success "Containers started successfully"
 else
     print_error "Failed to start containers"
@@ -153,14 +159,14 @@ done
 
 if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
     print_warning "Services are taking longer than expected to become healthy"
-    print_warning "Check logs with: docker-compose logs -f"
+    print_warning "Check logs with: $DOCKER_COMPOSE logs -f"
 fi
 
 # Step 9: Display service status
 echo ""
 echo "Step 9: Service Status"
 echo "======================"
-docker-compose ps
+$DOCKER_COMPOSE ps
 
 # Step 10: Test endpoints
 echo ""
@@ -188,10 +194,10 @@ echo "Health Check: https://$(curl -s ifconfig.me):8443/actuator/health"
 echo ""
 echo "Useful Commands:"
 echo "----------------"
-echo "View logs:        docker-compose logs -f"
-echo "Stop services:    docker-compose down"
-echo "Restart services: docker-compose restart"
-echo "Check status:     docker-compose ps"
+echo "View logs:        $DOCKER_COMPOSE logs -f"
+echo "Stop services:    $DOCKER_COMPOSE down"
+echo "Restart services: $DOCKER_COMPOSE restart"
+echo "Check status:     $DOCKER_COMPOSE ps"
 echo ""
 echo "Next Steps:"
 echo "-----------"
@@ -199,6 +205,6 @@ echo "1. Ensure Azure NSG allows ports 8080 and 8443"
 echo "2. Test the health endpoint from outside the VM"
 echo "3. Replace self-signed SSL certificate for production"
 echo "4. Change default passwords in .env file"
-echo "5. Review logs for any warnings: docker-compose logs"
+echo "5. Review logs for any warnings: $DOCKER_COMPOSE logs"
 echo ""
 print_success "Deployment completed successfully!"
