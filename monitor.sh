@@ -31,13 +31,23 @@ print_error() {
     echo -e "${RED}✗ $1${NC}"
 }
 
+# Detect docker compose command
+if docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+else
+    echo "Error: Docker Compose not found"
+    exit 1
+fi
+
 # Main monitoring
 clear
 print_header "SmartDine Backend - System Monitor"
 
 # 1. Container Status
 print_header "1. Container Status"
-docker-compose ps
+$DOCKER_COMPOSE ps
 
 # 2. Container Health
 print_header "2. Container Health"
@@ -77,11 +87,11 @@ echo "Public IP: $PUBLIC_IP"
 
 # 5. Recent Logs
 print_header "5. Recent Application Logs (Last 20 lines)"
-docker-compose logs --tail=20 springboot-app
+$DOCKER_COMPOSE logs --tail=20 springboot-app
 
 # 6. Recent PostgreSQL Logs
 print_header "6. Recent PostgreSQL Logs (Last 10 lines)"
-docker-compose logs --tail=10 postgres
+$DOCKER_COMPOSE logs --tail=10 postgres
 
 # 7. Disk Usage
 print_header "7. Disk Usage"
@@ -118,13 +128,13 @@ fi
 if [ $ISSUES -eq 0 ]; then
     print_success "All systems operational!"
 else
-    print_warning "Found $ISSUES issue(s) - check logs with: docker-compose logs -f"
+    print_warning "Found $ISSUES issue(s) - check logs with: $DOCKER_COMPOSE logs -f"
 fi
 
 print_header "Useful Commands"
-echo "View real-time logs:     docker-compose logs -f"
-echo "Restart application:     docker-compose restart springboot-app"
-echo "Restart PostgreSQL:      docker-compose restart postgres"
-echo "Stop all services:       docker-compose down"
-echo "Rebuild and restart:     docker-compose up -d --build"
+echo "View real-time logs:     $DOCKER_COMPOSE logs -f"
+echo "Restart application:     $DOCKER_COMPOSE restart springboot-app"
+echo "Restart PostgreSQL:      $DOCKER_COMPOSE restart postgres"
+echo "Stop all services:       $DOCKER_COMPOSE down"
+echo "Rebuild and restart:     $DOCKER_COMPOSE up -d --build"
 echo ""
