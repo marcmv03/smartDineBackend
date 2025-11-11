@@ -38,6 +38,9 @@ services:
     ports:
       - "${APP_PORT:-8080}:8080"     # HTTP port (optional, for backward compatibility)
       - "${APP_HTTPS_PORT:-8443}:8443"  # HTTPS port
+    volumes:
+      # Mount Let's Encrypt certificates from host
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     environment:
       SPRING_APPLICATION_NAME: ${SPRING_APPLICATION_NAME:-smartDine}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/smartDine

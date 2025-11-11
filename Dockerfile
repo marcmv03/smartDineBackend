@@ -20,8 +20,8 @@ RUN apk add --no-cache curl
 # Copy the JAR from build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Copy SSL certificate from resources
-COPY src/main/resources/smartdine.p12 /app/keystore/smartdine.p12
+# Note: SSL certificates are mounted via Docker volume from host /etc/letsencrypt
+# No need to copy certificates into the image
 
 # Expose ports (8080 for HTTP, 8443 for HTTPS)
 EXPOSE 8080 8443
