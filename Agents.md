@@ -18,7 +18,48 @@ Quick facts (where to look)
 - Entities: `src/main/java/com/smartDine/entity` — JPA entities (internal use only, not exposed in API).
 - Security: `src/main/java/com/smartDine/configs/SecurityConfig.java` and `JwtAuthenticationFilter.java`.
 - Tests: `src/test/java` and `src/test/resources/application-test.properties` (H2 in-memory DB).
-- Api documentation : api.yaml 
+- Api documentation : api.yaml
+- **Static files (images)**: AWS S3 bucket configured via `S3Service` and `S3Config`. See "AWS S3 Storage" section below.
+
+AWS S3 Storage for Static Files
+- **Purpose**: Store and serve static files (restaurant images, menu item photos) using AWS S3.
+- **Configuration**:
+  - `S3Config.java`: Configures AWS S3 client with credentials from environment variables.
+  - `S3Service.java`: Provides methods to upload, retrieve, and get metadata of files in S3.
+  - Environment variables (defined in `.env`):
+    - `AWS_ACCESS_KEY_ID`: AWS access key for S3 authentication
+    - `AWS_SECRET_ACCESS_KEY`: AWS secret key for S3 authentication
+    - `AWS_REGION`: AWS region where the S3 bucket is located (default: us-east-1)
+    - `AWS_S3_BUCKET`: Name of the S3 bucket (default: smartdine-s3-bucket)
+- **Usage Pattern**:
+  - Controllers receive `MultipartFile` uploads
+  - Call `S3Service.uploadFile(file, keyName)` to store in S3
+  - Returns public URL to the stored file
+  - Use `S3Service.getFile(keyName)` to retrieve files as `InputStreamResource`
+- **Security**:
+  - Files are currently uploaded with `PublicRead` ACL (publicly accessible)
+  - For production, consider using presigned URLs for private access control
+  - **NEVER commit AWS credentials** to the repository
+  - Always use environment variables for AWS configuration
+- **Testing**:
+  - `S3ServiceTest.java`: Unit tests using Mockito to mock AWS S3 client
+  - Tests cover `uploadFile()`, `getFile()`, and `getMetadata()` methods
+  - Tests validate proper S3 API interactions without requiring real AWS credentials
+- **File Naming Convention**:
+  - Format: `restaurants/{restaurantId}/images/{uuid}.{extension}`
+  - Example: `restaurants/123/images/550e8400-e29b-41d4-a716-446655440000.jpg`
+  - UUID prevents filename collisions
+- **API Endpoint**:
+  - `POST /api/restaurants/{id}/images` - Upload image, returns URL and metadata
+  - Controller: `ImageController.java`
+  - Response: `UploadResponse` with `keyName`, `url`, `contentType`, `size`
+- **Error Handling**:
+  - `IOException` thrown by upload/download methods
+  - Global exception handler (`GlobalExceptionHandler`) catches and processes errors
+  - Validate file is not null/empty before upload
+- **Dependencies**:
+  - `aws-java-sdk-s3` in `pom.xml` for AWS SDK
+  - Spring Boot `MultipartFile` for file uploads 
 
 Coding and change rules
 - Preserve API paths under `/smartdine/api/` unless the user explicitly approves breaking changes.
@@ -98,6 +139,15 @@ Edge cases and pitfalls known in this repo
 - **TimeSlot validation**: `TimeSlotDTO` has a custom `@AssertTrue` validation for `isValidTimeRange()` to ensure startTime < endTime.
 - **Restaurant ownership**: Most restaurant operations require checking if the authenticated `Business` user is the owner via `RestaurantService.isOwnerOfRestaurant()`.
 - **DTO to Entity id handling**: When converting DTO to Entity using `toEntity()`, always check if `dto.getId() != null` before setting it on the entity, as JPA manages entity IDs. Some entities may not expose `setId()` directly.
+- **AWS S3 Configuration**: S3 credentials are loaded from environment variables (`.env` file). If `S3Service` fails to connect, verify:
+  - Environment variables are set: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET`
+  - S3 bucket exists and has proper IAM permissions for the provided credentials
+  - For local testing, mock `AmazonS3` client in tests (see `S3ServiceTest.java`)
+- **File Upload Size Limits**: Spring Boot default max file size is 1MB. To increase, add to `application.properties`:
+  ```properties
+  spring.servlet.multipart.max-file-size=10MB
+  spring.servlet.multipart.max-request-size=10MB
+  ```
 
 Entity and DTO Structure Guide
 - **Restaurant**: 
@@ -121,6 +171,7 @@ Service Layer Patterns
 - **TimeSlotService**: Uses `TimeSlotDTO.toEntity()`, validates ownership and time slot conflicts.
 - **ReservationService**: Assigns available tables, validates time slot availability and capacity.
 - **TableService**: Creates tables for restaurants, validates ownership and unique table numbers per restaurant.
+- **S3Service**: Manages file uploads/downloads to AWS S3. Methods throw `IOException` that must be handled by controllers or caught by `GlobalExceptionHandler`.
 - **Pattern**: Services receive DTOs from controllers, convert to entities, perform validation, save, and return entities (controllers then convert back to DTOs).
 
 Transaction Management (CRITICAL)

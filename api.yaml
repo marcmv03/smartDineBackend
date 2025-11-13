@@ -4,10 +4,12 @@ info:
   version: 1.0.0
   description: |
     REST API that powers the SmartDine platform for restaurant discovery, menu management,
-    reservations, and user authentication.
+    reservations, tables, time slots, and user authentication.
 servers:
+  - url: https://localhost:8443
+    description: Local development server (HTTPS)
   - url: http://localhost:8080
-    description: Local development server
+    description: Local development server (HTTP)
 tags:
   - name: Authentication
     description: Endpoints for registering and logging into the platform.
@@ -17,6 +19,10 @@ tags:
     description: Manage dishes and drinks offered by a restaurant.
   - name: Time Slots
     description: Configure reservation availability for restaurants.
+  - name: Tables
+    description: Manage restaurant tables for reservations.
+  - name: Reservations
+    description: Create and manage customer reservations.
   - name: User Profile
     description: Retrieve the authenticated user profile.
 paths:
@@ -336,7 +342,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MenuItem'
-  /smartdine/api/restaurants/{restaurantId}/timeSlots:
+  /smartdine/api/restaurants/{restaurantId}/timeslots:
     post:
       tags:
         - Time Slots
@@ -383,7 +389,211 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/me:
+    get:
+      tags:
+        - Time Slots
+      summary: Get time slots for a restaurant
+      operationId: getTimeSlots
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: day
+          required: false
+          schema:
+            $ref: '#/components/schemas/DayOfWeek'
+          description: Optional filter by day of week
+      responses:
+        '200':
+          description: List of time slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimeSlot'
+  /smartdine/api/restaurants/{restaurantId}/tables:
+    post:
+      tags:
+        - Tables
+      summary: Create a new table for a restaurant
+      operationId: createTable
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableRequest'
+            examples:
+              sample:
+                summary: New table
+                value:
+                  number: 5
+                  capacity: 4
+                  outside: false
+      responses:
+        '201':
+          description: Table created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantTable'
+        '401':
+          description: Unauthorized - authentication required
+        '403':
+          description: Forbidden - user is not a business owner
+        '400':
+          description: Validation error or duplicate table number
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Tables
+      summary: Get all tables for a restaurant
+      operationId: getRestaurantTables
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: List of restaurant tables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RestaurantTable'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - user is not a business owner
+  /smartdine/api/restaurants/{restaurantId}/tables/available:
+    get:
+      tags:
+        - Tables
+      summary: Get available tables for a specific date and time slot
+      operationId: getAvailableTables
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Reservation date (YYYY-MM-DD)
+        - in: query
+          name: timeSlot
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: Time slot ID
+        - in: query
+          name: outside
+          required: true
+          schema:
+            type: boolean
+          description: Filter by outdoor/indoor tables
+      responses:
+        '200':
+          description: List of available tables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RestaurantTable'
+  /smartdine/api/reservations:
+    post:
+      tags:
+        - Reservations
+      summary: Create a new reservation
+      operationId: createReservation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest'
+            examples:
+              sample:
+                summary: New reservation
+                value:
+                  timeSlotId: 1
+                  restaurantId: 1
+                  tableId: 3
+                  numCustomers: 4
+                  date: "2025-01-15"
+      responses:
+        '201':
+          description: Reservation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '401':
+          description: Unauthorized - authentication required
+        '403':
+          description: Forbidden - user is not a customer
+        '400':
+          description: Validation error or table not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/me/reservations:
+    get:
+      tags:
+        - Reservations
+      summary: Get all reservations for the authenticated customer
+      operationId: getMyReservations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of customer reservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - user is not a customer
+  /smartdine/api/me:
     get:
       tags:
         - User Profile
@@ -433,7 +643,9 @@ components:
         phoneNumber:
           type: integer
           format: int64
-          description: International phone number without separators.
+          minimum: 100000000
+          maximum: 999999999999
+          description: International phone number without separators (9-12 digits).
     LoginRequest:
       type: object
       required:
@@ -683,3 +895,89 @@ components:
         - FRIDAY
         - SATURDAY
         - SUNDAY
+    TableRequest:
+      type: object
+      required:
+        - number
+        - capacity
+        - outside
+      properties:
+        number:
+          type: integer
+          minimum: 1
+          description: Table number (must be unique within the restaurant)
+        capacity:
+          type: integer
+          minimum: 1
+          description: Number of people the table can accommodate
+        outside:
+          type: boolean
+          description: Whether the table is located outside
+    RestaurantTable:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        number:
+          type: integer
+        capacity:
+          type: integer
+        outside:
+          type: boolean
+        restaurantId:
+          type: integer
+          format: int64
+    ReservationRequest:
+      type: object
+      required:
+        - timeSlotId
+        - restaurantId
+        - tableId
+        - numCustomers
+        - date
+      properties:
+        timeSlotId:
+          type: integer
+          format: int64
+          description: ID of the time slot for the reservation
+        restaurantId:
+          type: integer
+          format: int64
+          description: ID of the restaurant
+        tableId:
+          type: integer
+          format: int64
+          minimum: 1
+          description: ID of the table to reserve
+        numCustomers:
+          type: integer
+          minimum: 1
+          description: Number of customers for the reservation
+        date:
+          type: string
+          format: date
+          description: Reservation date (YYYY-MM-DD)
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        timeSlotId:
+          type: integer
+          format: int64
+        restaurantId:
+          type: integer
+          format: int64
+        tableId:
+          type: integer
+          format: int64
+        customerId:
+          type: integer
+          format: int64
+        numCustomers:
+          type: integer
+        date:
+          type: string
+          format: date
