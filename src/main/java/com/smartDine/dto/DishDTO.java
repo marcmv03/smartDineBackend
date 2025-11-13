@@ -6,6 +6,7 @@ import com.smartDine.entity.CourseType;
 import com.smartDine.entity.Dish;
 import com.smartDine.entity.Element;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,6 +14,7 @@ import lombok.Setter;
 @Setter
 public class DishDTO extends MenuItemDTO {
     private List<Element> elements;
+    @NotNull
     private CourseType courseType;
     
     public DishDTO() {

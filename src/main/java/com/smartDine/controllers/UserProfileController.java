@@ -1,16 +1,18 @@
 package com.smartDine.controllers;
  // DTO para la actualización
-import com.smartDine.entity.Role;
-import com.smartDine.entity.User;
-import com.smartDine.services.BusinessService; // Asumimos que este servicio ya existe
-import com.smartDine.services.CustomerService;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping; // Asumimos que este servicio ya existe
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.smartDine.entity.Role;
+import com.smartDine.entity.User;
+import com.smartDine.services.BusinessService;
+import com.smartDine.services.CustomerService;
 
 @RestController
-@RequestMapping("/api/me") // Todas las rutas de este controlador parten de /api/me
+@RequestMapping("/smartdine/api/me") // Todas las rutas de este controlador parten de /api/me
 public class UserProfileController {
 
     private final CustomerService customersService;
