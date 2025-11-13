@@ -1,10 +1,15 @@
 package com.smartDine.controllers;
 
+import java.net.URI;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,13 +20,17 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.smartDine.dto.RestaurantDTO;
+import com.smartDine.dto.UploadResponse;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.User;
 import com.smartDine.services.RestaurantService;
+import com.smartDine.services.S3Service;
 
 import jakarta.validation.Valid;
 
@@ -31,6 +40,8 @@ import jakarta.validation.Valid;
 public class RestaurantController {
     @Autowired
     private RestaurantService restaurantService;
+    @Autowired
+    private S3Service s3Service;
 
     /**
      * GET /restaurants - Get all restaurants or search by name
@@ -85,5 +96,41 @@ public class RestaurantController {
     public ResponseEntity<Void> deleteRestaurant(@PathVariable Long id) {
         restaurantService.deleteRestaurant(id);
         return ResponseEntity.noContent().build();
+    }
+    @PostMapping(
+        value = "/{id}/images",
+        consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+        produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<UploadResponse> upload(
+            @PathVariable Long id,
+            @RequestPart("file") MultipartFile file,
+            @AuthenticationPrincipal User User ) throws java.io.IOException {
+
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        if( !(User instanceof Business) ) {
+            throw new BadCredentialsException("Only business owners can upload restaurant images");
+        }
+        Restaurant restaurant = restaurantService.getRestaurantById(id);
+        if(!Objects.equals(restaurant.getOwner().getId(), User.getId())) {
+        throw new BadCredentialsException("You are not the owner of this restaurant");
+        }
+
+        String ext = Optional.ofNullable(file.getOriginalFilename())
+                .filter(n -> n.contains("."))
+                .map(n -> n.substring(n.lastIndexOf('.') + 1))
+                .orElse("jpg");
+
+        String keyName = "restaurants/%d/images/%s.%s"
+                .formatted(id, java.util.UUID.randomUUID(), ext);
+
+        String url = s3Service.uploadFile(file, keyName); // errores gestionados por GlobalExceptionHandler
+        restaurantService.addImageToRestaurant(id, keyName);
+        UploadResponse body = new UploadResponse(keyName, url, file.getContentType(), file.getSize());
+        URI location = URI.create("/api/images/" + keyName);
+
+        return ResponseEntity.created(location).body(body);
     }
 }
