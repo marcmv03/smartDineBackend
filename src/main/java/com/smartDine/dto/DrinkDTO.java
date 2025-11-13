@@ -3,12 +3,16 @@ package com.smartDine.dto;
 import com.smartDine.entity.Drink;
 import com.smartDine.entity.DrinkType;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 public class DrinkDTO extends MenuItemDTO {
+    
+    @NotNull
     private DrinkType drinkType;
     
     public DrinkDTO() {

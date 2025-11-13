@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/smartdine/api/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "smartdine/api/restaurants/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "smartdine/api/restaurants/{id}/tables/avaliable").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

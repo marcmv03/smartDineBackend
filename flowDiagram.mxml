@@ -1,0 +1,151 @@
+<mxfile host="app.diagrams.net" modified="2025-11-11T10:45:00Z" agent="5.0 (SmartDine)" version="22.0.0" type="device">
+  <!-- SEQ 1: PUJADA MULTIPART (POST /api/smartdine/upload) -->
+  <diagram id="seq-upload" name="Seq - Upload Imatge (multipart)">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+
+        <!-- Participants -->
+        <mxCell id="p_client" value="Client" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top" vertex="1" parent="1">
+          <mxGeometry x="80" y="40" width="40" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="l_client" value="" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="90" y="120" width="20" height="920" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="p_uploadCtrl" value="ImageUploadController" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="420" y="40" width="180" height="1000" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="p_imageSvc" value="ImageService" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="780" y="40" width="140" height="1000" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="p_bucket" value="Bucket" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="40" width="140" height="1000" as="geometry"/>
+        </mxCell>
+
+        <!-- Activation boxes -->
+        <mxCell id="act_uploadCtrl_1" value="" style="shape=umlActivation;fillColor=#ffffff;strokeColor=#000000" vertex="1" parent="p_uploadCtrl">
+          <mxGeometry x="80" y="210" width="20" height="520" as="geometry"/>
+        </mxCell>
+        <mxCell id="act_imageSvc_1" value="" style="shape=umlActivation;fillColor=#ffffff;strokeColor=#000000" vertex="1" parent="p_imageSvc">
+          <mxGeometry x="60" y="300" width="20" height="340" as="geometry"/>
+        </mxCell>
+        <mxCell id="act_bucket_1" value="" style="shape=umlActivation;fillColor=#ffffff;strokeColor=#000000" vertex="1" parent="p_bucket">
+          <mxGeometry x="60" y="380" width="20" height="160" as="geometry"/>
+        </mxCell>
+
+        <!-- Messages -->
+        <mxCell id="m1" value="POST /api/smartdine/upload&#10;multipart/form-data: file" style="endArrow=block;html=1;rounded=0;exitX=1;exitY=0.2;entryX=0;entryY=0.2" edge="1" parent="1" source="l_client" target="p_uploadCtrl">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="280" y="210" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="m2" value="validate(file)" style="endArrow=block;html=1;" edge="1" parent="1" source="p_uploadCtrl" target="p_imageSvc">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="720" y="300" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="m3" value="putObject(key, contentType, bytes)" style="endArrow=block;html=1;" edge="1" parent="1" source="p_imageSvc" target="p_bucket">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1060" y="380" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="m4" value="200 OK" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1" source="p_bucket" target="p_imageSvc">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="920" y="520" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="m5" value="{ key: &quot;media/YYYY/MM/uuid.ext&quot; }" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1" source="p_imageSvc" target="p_uploadCtrl">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="560" y="600" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="m6" value="201 Created&#10;{ key }" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1" source="p_uploadCtrl" target="l_client">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="190" y="730" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Notes -->
+        <mxCell id="n1" value="Desar la clau (coverImageKey) a Restaurant" style="shape=note;whiteSpace=wrap;size=20;fillColor=#fff2cc;strokeColor=#d6b656" vertex="1" parent="1">
+          <mxGeometry x="210" y="760" width="260" height="60" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <!-- SEQ 2: LECTURA (GET /images/{coverImageKey}) -->
+  <diagram id="seq-read" name="Seq - Lectura Imatge (proxy bucket)">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+
+        <!-- Participants -->
+        <mxCell id="rp_client" value="Client" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top" vertex="1" parent="1">
+          <mxGeometry x="80" y="40" width="40" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="rl_client" value="" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="90" y="120" width="20" height="900" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rp_readCtrl" value="ImageReadController" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="420" y="40" width="180" height="980" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rp_imageSvc" value="ImageService" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="780" y="40" width="140" height="980" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rp_bucket" value="Bucket" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="40" width="140" height="980" as="geometry"/>
+        </mxCell>
+
+        <!-- Activation boxes -->
+        <mxCell id="r_act_readCtrl" value="" style="shape=umlActivation;fillColor=#ffffff;strokeColor=#000000" vertex="1" parent="rp_readCtrl">
+          <mxGeometry x="80" y="210" width="20" height="520" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_act_imageSvc" value="" style="shape=umlActivation;fillColor=#ffffff;strokeColor=#000000" vertex="1" parent="rp_imageSvc">
+          <mxGeometry x="60" y="300" width="20" height="420" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_act_bucket" value="" style="shape=umlActivation;fillColor=#ffffff;strokeColor=#000000" vertex="1" parent="rp_bucket">
+          <mxGeometry x="60" y="380" width="20" height="260" as="geometry"/>
+        </mxCell>
+
+        <!-- Messages -->
+        <mxCell id="rm1" value="GET /images/{coverImageKey}&#10;If-None-Match: &lt;etag&gt;" style="endArrow=block;html=1;" edge="1" parent="1" source="rl_client" target="rp_readCtrl">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="290" y="210" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="rm2" value="stream(key, ifNoneMatch)" style="endArrow=block;html=1;" edge="1" parent="1" source="rp_readCtrl" target="rp_imageSvc">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="720" y="300" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="rm3" value="HEAD key → ETag/Length/Type" style="endArrow=block;html=1;" edge="1" parent="1" source="rp_imageSvc" target="rp_bucket">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1060" y="380" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="rm4" value="If ETag match → 304" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1" source="rp_bucket" target="rp_imageSvc">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="920" y="470" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="rm5" value="GET key → stream" style="endArrow=block;html=1;" edge="1" parent="1" source="rp_imageSvc" target="rp_bucket">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1060" y="520" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="rm6" value="200 + bytes" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1" source="rp_bucket" target="rp_imageSvc">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="920" y="580" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="rm7" value="ResponseEntity(Resource)&#10;ETag, Cache-Control" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1" source="rp_imageSvc" target="rp_readCtrl">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="560" y="650" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="rm8" value="200 OK (bytes) o 304 Not Modified" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1" source="rp_readCtrl" target="rl_client">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="200" y="720" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Notes -->
+        <mxCell id="rn1" value="Clau relativa emmagatzemada a Restaurant.coverImageKey" style="shape=note;whiteSpace=wrap;size=20;fillColor=#fff2cc;strokeColor=#d6b656" vertex="1" parent="1">
+          <mxGeometry x="210" y="760" width="300" height="60" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

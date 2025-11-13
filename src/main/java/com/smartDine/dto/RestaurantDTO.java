@@ -19,6 +19,7 @@ public class RestaurantDTO {
     @Size(max = 1000, message = "La descripción no puede exceder los 1000 caracteres")
     private String description;
     
+    String imageUrl;
     // Default constructor
     public RestaurantDTO() {}
     
@@ -56,6 +57,9 @@ public class RestaurantDTO {
     public String getDescription() {
         return description;
     }
+    public String getImageUrl() {
+        return imageUrl;
+    }
     
     public RestaurantDTO setDescription(String description) {
         this.description = description;
@@ -70,6 +74,7 @@ public class RestaurantDTO {
         restaurant.setName(dto.getName());
         restaurant.setAddress(dto.getAddress());
         restaurant.setDescription(dto.getDescription());
+        restaurant.setImageUrl(dto.getImageUrl());
         return restaurant;
     }
     
@@ -79,9 +84,14 @@ public class RestaurantDTO {
         dto.setName(restaurant.getName());
         dto.setAddress(restaurant.getAddress());
         dto.setDescription(restaurant.getDescription());
+        dto.setImageUrl(restaurant.getImageUrl());
         return dto;
     }
     
+    private void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
     public static List<RestaurantDTO> fromEntity(List<Restaurant> restaurants) {
         return restaurants.stream()
             .map(RestaurantDTO::fromEntity)
