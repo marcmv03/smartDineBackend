@@ -166,4 +166,10 @@ public class RestaurantService {
             .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
         return restaurant.getTables();
     }
+    public void addImageToRestaurant(Long restaurantId, String imageUrl) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+        restaurant.setImageUrl(imageUrl);
+        restaurantRepository.save(restaurant);
+    }
 }
