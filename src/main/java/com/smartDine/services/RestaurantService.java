@@ -172,4 +172,8 @@ public class RestaurantService {
         restaurant.setImageUrl(imageUrl);
         restaurantRepository.save(restaurant);
     }
+
+    public List<Restaurant> getRestaurantsByOwner(Business business) {
+      return restaurantRepository.findByOwner(business);
+    }
 }
