@@ -133,4 +133,13 @@ public class RestaurantController {
 
         return ResponseEntity.created(location).body(body);
     }
+    @GetMapping("/me/restaurants")
+    public List<RestaurantDTO> getMyRestaurants(@AuthenticationPrincipal User user) {
+        if (!(user instanceof Business)) {
+            return List.of();
+        }
+        List<Restaurant> restaurants = restaurantService.getRestaurantsByOwner((Business) user);
+        return RestaurantDTO.fromEntity(restaurants);
+    }
+    
 }
