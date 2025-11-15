@@ -174,6 +174,6 @@ public class RestaurantService {
     }
 
     public List<Restaurant> getRestaurantsByOwner(Business business) {
-      return business.getRestaurants();
+      return restaurantRepository.findByOwner(business);
     }
 }

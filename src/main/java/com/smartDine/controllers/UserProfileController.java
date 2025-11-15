@@ -1,27 +1,32 @@
 package com.smartDine.controllers;
- // DTO para la actualización
+ import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping; // Asumimos que este servicio ya existe
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.smartDine.dto.RestaurantDTO;
+import com.smartDine.entity.Business;
+import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.Role;
 import com.smartDine.entity.User;
 import com.smartDine.services.BusinessService;
 import com.smartDine.services.CustomerService;
+import com.smartDine.services.RestaurantService;
 
 @RestController
 @RequestMapping("/smartdine/api/me") // Todas las rutas de este controlador parten de /api/me
 public class UserProfileController {
+    @Autowired
+    private  CustomerService customersService;
+    @Autowired
+    private  BusinessService businessService;
+    @Autowired
+    private  RestaurantService restaurantService;
 
-    private final CustomerService customersService;
-    private final BusinessService businessService;
-
-    public UserProfileController(CustomerService customersService, BusinessService businessService) {
-        this.customersService = customersService;
-        this.businessService = businessService;
-    }
 
     /**
      * GET /api/me
@@ -52,4 +57,13 @@ public class UserProfileController {
         // Si el rol no es ninguno de los esperados, devolvemos un error.
         return ResponseEntity.status(403).body("User has an unrecognized role.");
     }
+    @GetMapping("/restaurants")
+    public List<RestaurantDTO> getMyRestaurants(@AuthenticationPrincipal User user) {
+        if (!(user instanceof Business)) {
+            return List.of();
+        }
+        List<Restaurant> restaurants = restaurantService.getRestaurantsByOwner((Business)user) ;
+        return RestaurantDTO.fromEntity(restaurants);
+    }
+    
 }
