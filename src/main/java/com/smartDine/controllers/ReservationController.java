@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.smartDine.dto.ReservationDTO;
+import com.smartDine.dto.ReservationDetailsDTO;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
 import com.smartDine.entity.Role;
@@ -54,7 +55,7 @@ public class ReservationController {
     }
 
     @GetMapping("/me/reservations")
-    public ResponseEntity<List<ReservationDTO>> getMyReservations(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<ReservationDetailsDTO>> getMyReservations(@AuthenticationPrincipal User user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -64,7 +65,7 @@ public class ReservationController {
 
         Customer customer = customerService.getCustomerById(user.getId());
         List<Reservation> reservations = reservationService.getReservationsForCustomer(customer.getId());
-        List<ReservationDTO> response = ReservationDTO.fromEntity(reservations);
+        List<ReservationDetailsDTO> response = ReservationDetailsDTO.fromEntity(reservations);
         return ResponseEntity.ok(response);
     }
 }

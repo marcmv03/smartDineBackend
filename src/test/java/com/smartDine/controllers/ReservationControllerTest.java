@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import com.smartDine.dto.ReservationDTO;
+import com.smartDine.dto.ReservationDetailsDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
@@ -56,7 +57,8 @@ class ReservationControllerTest {
         Restaurant restaurant = new Restaurant();
         restaurant.setId(10L);
         restaurant.setName("Test Restaurant");
-        restaurant.setAddress("Address");
+        restaurant.setAddress("123 Main Street");
+        restaurant.setImageUrl("restaurants/10/images/test.jpg");
 
         TimeSlot timeSlot = new TimeSlot();
         timeSlot.setId(20L);
@@ -121,22 +123,29 @@ class ReservationControllerTest {
         when(customerService.getCustomerById(1L)).thenReturn(customer);
         when(reservationService.getReservationsForCustomer(1L)).thenReturn(List.of(reservation));
 
-        ResponseEntity<List<ReservationDTO>> response = reservationController.getMyReservations(customer);
+        ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(customer);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
-        ReservationDTO dto = response.getBody().get(0);
-        assertEquals(40L, dto.getId());
-        assertEquals(30L, dto.getTableId());
-        assertEquals(reservationDate, dto.getDate());
+        
+        // Verificar que el DTO mapea correctamente todos los campos
+        ReservationDetailsDTO dto = response.getBody().get(0);
+        assertEquals(40L, dto.getReservationId());
+        assertEquals("Test Restaurant", dto.getRestaurantName());
+        assertEquals("restaurants/10/images/test.jpg", dto.getImageKey());
+        assertEquals(reservationDate.toString(), dto.getReservationDate());
+        assertEquals(12.0, dto.getStartTime());
+        assertEquals(14.0, dto.getEndTime());
+        assertEquals(2, dto.getNumberOfGuests());
+        assertEquals("123 Main Street", dto.getAddress());
     }
 
     @Test
     void getMyReservationsAsBusinessReturnsForbidden() {
         Business businessUser = new Business();
         businessUser.setId(3L);
-        ResponseEntity<List<ReservationDTO>> response = reservationController.getMyReservations(businessUser);
+        ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(businessUser);
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
     }
 }
