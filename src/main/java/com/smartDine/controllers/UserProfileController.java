@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping; // Asumimos que este 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.smartDine.dto.ProfileDTO;
 import com.smartDine.dto.RestaurantDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Restaurant;
@@ -42,19 +43,17 @@ public class UserProfileController {
         
         // Verificamos el rol del usuario para determinar qué servicio usar.
         if (user.getRole() == Role.ROLE_CUSTOMER) {
+            User result = customersService.getCustomerById(user.getId());
+            ProfileDTO customerDTO = ProfileDTO.fromEntity(result);
+            return ResponseEntity.ok(customerDTO);
             // Si es un cliente, buscamos su perfil completo en el CustomersService.
             // Es importante buscar por ID para obtener la entidad completa de la subclase.
-            return ResponseEntity.ok(
-                customersService.getCustomerById(user.getId()) 
-            );
         } else if (user.getRole() == Role.ROLE_BUSINESS) {
             // Si es una empresa, hacemos lo propio con el BusinessService.
-            return ResponseEntity.ok(
-                businessService.getBusinessById(user.getId()) 
-            );
+            User result = businessService.getBusinessById(user.getId());
+            ProfileDTO businessDTO = ProfileDTO.fromEntity(result);
+            return ResponseEntity.ok(businessDTO);
         }
-
-        // Si el rol no es ninguno de los esperados, devolvemos un error.
         return ResponseEntity.status(403).body("User has an unrecognized role.");
     }
     @GetMapping("/restaurants")

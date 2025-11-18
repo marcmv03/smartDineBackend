@@ -1,24 +1,23 @@
 package com.smartDine.dto;
 
-import com.smartDine.entity.Customer;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class CustomerDTO {
+import com.smartDine.entity.Customer;
+import com.smartDine.entity.Role;
+import com.smartDine.entity.User;
+
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor
+public class ProfileDTO {
     private Long id;
     private String name;
-    private String password;
     private String email;
     private String phoneNumber;
+    private Role role ;
+    public ProfileDTO() {}
 
-    public CustomerDTO() {}
-
-    public CustomerDTO(String name, String password, String email, String phoneNumber) {
-        this.name = name;
-        this.email = email;
-        this.phoneNumber = phoneNumber;
-        this.password = password;
-    }
 
     public Long getId() {
         return id;
@@ -52,43 +51,47 @@ public class CustomerDTO {
         this.phoneNumber = phoneNumber;
     }
 
-    public String getPassword() {
-        return password;
+    public Role getRole() {
+        return role;
     }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public void setRole(Role role) {
+        this.role = role;
     }
     
-    public static Customer toEntity(CustomerDTO dto) {
+    public static Customer toEntity(ProfileDTO dto) {
         Customer customer = new Customer();
         if (dto.getId() != null) {
             // Note: id is managed by JPA for User entities
         }
         customer.setName(dto.getName());
         customer.setEmail(dto.getEmail());
-        customer.setPassword(dto.getPassword());
         if (dto.getPhoneNumber() != null) {
             customer.setPhoneNumber(Long.parseLong(dto.getPhoneNumber()));
         }
         return customer;
     }
     
-    public static CustomerDTO fromEntity(Customer customer) {
-        CustomerDTO dto = new CustomerDTO();
-        dto.setId(customer.getId());
-        dto.setName(customer.getName());
-        dto.setEmail(customer.getEmail());
-        dto.setPassword(customer.getPassword());
-        if (customer.getPhoneNumber() != null) {
-            dto.setPhoneNumber(customer.getPhoneNumber().toString());
+    public static ProfileDTO fromEntity(User user) {
+        ProfileDTO dto = new ProfileDTO();
+        dto.setId(user.getId());
+        dto.setName(user.getName());
+        dto.setEmail(user.getEmail());
+        dto.setRole(user.getRole());
+        if (user.getPhoneNumber() != null) {
+            dto.setPhoneNumber(user.getPhoneNumber().toString());
         }
         return dto;
     }
     
-    public static List<CustomerDTO> fromEntity(List<Customer> customers) {
-        return customers.stream()
-            .map(CustomerDTO::fromEntity)
+    public static List<ProfileDTO> fromEntity(List<User> users) {
+        return users.stream()
+            .map(ProfileDTO::fromEntity)
             .collect(Collectors.toList());
     }
+    public static List<Customer> toEntity(List<ProfileDTO> dtos) {
+        return dtos.stream()
+            .map(ProfileDTO::toEntity)
+            .collect(Collectors.toList());
+    }
+    
 }

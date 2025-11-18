@@ -12,7 +12,9 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.servlet.resource.NoResourceFoundException ; 
+import org.springframework.web.servlet.resource.NoResourceFoundException ;
+
+import io.jsonwebtoken.ExpiredJwtException; 
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -85,6 +87,14 @@ public class GlobalExceptionHandler {
             
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity<Map<String, Object>> handleExpiredJwtException(ExpiredJwtException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "El token ha expirado. Por favor, inicie sesión de nuevo.");
+        
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<Map<String, Object>> handleMethodNotSupportedException(HttpRequestMethodNotSupportedException ex) {
         Map<String, Object> response = new HashMap<>();
