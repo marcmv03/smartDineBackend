@@ -48,6 +48,7 @@ public class DishDTO extends MenuItemDTO {
         dto.setName(dish.getName());
         dto.setDescription(dish.getDescription());
         dto.setPrice(dish.getPrice());
+        dto.setImageUrl(dto.getImageUrl()) ; 
         dto.setItemType("DISH");
         dto.setCourseType(dish.getCourseType());
         dto.setElements(dish.getElements());

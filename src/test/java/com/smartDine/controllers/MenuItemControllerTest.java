@@ -1,5 +1,6 @@
 package com.smartDine.controllers;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -15,19 +26,26 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartDine.dto.DishDTO;
 import com.smartDine.dto.DrinkDTO;
+import com.smartDine.dto.UploadResponse;
+import com.smartDine.entity.Business;
 import com.smartDine.entity.CourseType;
 import com.smartDine.entity.DrinkType;
 import com.smartDine.entity.Element;
+import com.smartDine.services.MenuItemService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
 @Transactional
 public class MenuItemControllerTest {
@@ -41,9 +59,17 @@ public class MenuItemControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Mock
+    private MenuItemService menuItemService;
+
+    @InjectMocks
+    private MenuItemController menuItemController;
+
     private String baseUrl;
     private DishDTO dishDTO;
     private DrinkDTO drinkDTO;
+    private Business businessOwner;
+    private MockMultipartFile testImageFile;
     
     @BeforeEach
     void setUp() {
@@ -69,6 +95,21 @@ public class MenuItemControllerTest {
                 .setPrice(2.50)
                 .setItemType("DRINK");
         drinkDTO.setDrinkType(DrinkType.SOFT_DRINK);
+
+        // Create a business owner for image upload tests
+        businessOwner = new Business();
+        businessOwner.setId(1L);
+        businessOwner.setName("Test Owner");
+        businessOwner.setEmail("owner@test.com");
+        businessOwner.setPhoneNumber(123456789L);
+
+        // Create a test image file
+        testImageFile = new MockMultipartFile(
+            "file",
+            "test-image.jpg",
+            "image/jpeg",
+            "test image content".getBytes()
+        );
     }
 
     @Test
@@ -209,5 +250,115 @@ public class MenuItemControllerTest {
         System.out.println("✓ Polimorfismo JSON funcionando correctamente:");
         System.out.println("  - Tipo deserializado: " + menuItem.getClass().getSimpleName());
         System.out.println("  - Elementos específicos del plato preservados");
+    }
+
+    /**
+     * Integration test for MenuItem image upload using Mockito.
+     * Tests successful upload scenario with valid file and authenticated business owner.
+     */
+    @Test
+    public void uploadMenuItemImage_Success() throws IOException {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 10L;
+        String expectedKeyName = "restaurants/1/menu-items/10/images/test-uuid.jpg";
+        String expectedUrl = "https://smartdine-s3-bucket.s3.amazonaws.com/" + expectedKeyName;
+
+        // Mock uploadMenuItemImage to return [keyName, url]
+        when(menuItemService.uploadMenuItemImage(eq(restaurantId), eq(menuItemId), any(MultipartFile.class), eq(businessOwner)))
+            .thenReturn(new UploadResponse(
+                expectedKeyName,
+                expectedUrl,
+                "image/jpeg",
+                testImageFile.getSize()
+            ));
+
+        // When
+        ResponseEntity<UploadResponse> response = menuItemController.uploadMenuItemImage(
+            restaurantId,
+            menuItemId,
+            testImageFile,
+            businessOwner
+        );
+
+        // Then
+        assertNotNull(response, "Response should not be null");
+        assertEquals(HttpStatus.CREATED, response.getStatusCode(), "Should return CREATED status");
+        
+        UploadResponse body = response.getBody();
+        assertNotNull(body, "Response body should not be null");
+        assertEquals(expectedKeyName, body.getKey(), "Key should match expected");
+        assertEquals(expectedUrl, body.getUrl(), "URL should match expected");
+        assertEquals("image/jpeg", body.getContentType(), "Content type should match");
+        assertEquals(testImageFile.getSize(), body.getSize(), "File size should match");
+
+        // Verify service method was called
+        verify(menuItemService, times(1)).uploadMenuItemImage(
+            eq(restaurantId),
+            eq(menuItemId),
+            any(MultipartFile.class),
+            eq(businessOwner)
+        );
+
+        System.out.println("✓ MenuItem image upload test passed:");
+        System.out.println("  - Key: " + body.getKey());
+        System.out.println("  - URL: " + body.getUrl());
+        System.out.println("  - Content Type: " + body.getContentType());
+        System.out.println("  - Size: " + body.getSize());
+    }
+
+    /**
+     * Tests that uploading an empty file returns HTTP 400 Bad Request.
+     */
+    @Test
+    public void uploadMenuItemImage_EmptyFile_ShouldReturnBadRequest() throws IOException {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 10L;
+        MockMultipartFile emptyFile = new MockMultipartFile(
+            "file",
+            "empty.jpg",
+            "image/jpeg",
+            new byte[0]
+        );
+
+        // When
+        ResponseEntity<UploadResponse> response = menuItemController.uploadMenuItemImage(
+            restaurantId,
+            menuItemId,
+            emptyFile,
+            businessOwner
+        );
+
+        // Then
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode(), "Should return BAD_REQUEST for empty file");
+
+        // Verify service method was NOT called
+        verify(menuItemService, times(0)).uploadMenuItemImage(anyLong(), anyLong(), any(MultipartFile.class), any());
+
+        System.out.println("✓ Empty file validation test passed");
+    }
+
+    /**
+     * Tests that service layer exceptions are properly propagated to the controller.
+     */
+    @Test
+    public void uploadMenuItemImage_ServiceThrowsException_ShouldPropagate() throws IOException {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 10L;
+
+        // Mock service to throw exception
+        when(menuItemService.uploadMenuItemImage(eq(restaurantId), eq(menuItemId), any(MultipartFile.class), eq(businessOwner)))
+            .thenThrow(new IllegalArgumentException("You do not own this restaurant"));
+
+        // When/Then
+        try {
+            menuItemController.uploadMenuItemImage(restaurantId, menuItemId, testImageFile, businessOwner);
+            assertTrue(false, "Should have thrown IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertEquals("You do not own this restaurant", e.getMessage());
+            System.out.println("✓ Exception propagation test passed: " + e.getMessage());
+        }
     }
 }

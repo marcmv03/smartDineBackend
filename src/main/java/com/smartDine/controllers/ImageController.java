@@ -1,5 +1,6 @@
 package com.smartDine.controllers;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -10,37 +11,38 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.smartDine.services.S3Service;
+import com.smartDine.adapters.ImageAdapter;
+import com.smartDine.dto.ImageResponseDTO;
 
 @RestController
 @RequestMapping("smartdine/api")
 public class ImageController {
 
-    private final S3Service s3;
-
-    public ImageController(S3Service s3) { this.s3 = s3; }
-
+    @Autowired
+    private ImageAdapter imageAdapter;
 
     @GetMapping("/images")
     public ResponseEntity<InputStreamResource> getImage(@RequestParam ("key") String key) {
-        var meta = s3.getMetadata(key);
-        InputStreamResource resource = s3.getFile(key);
+        // Get image with metadata from adapter
+        ImageResponseDTO imageResponse = imageAdapter.getImage(key);
+        
+        // Create InputStreamResource from the InputStream
+        InputStreamResource resource = new InputStreamResource(imageResponse.getInputStream());
 
+        // Parse content type, fallback to octet-stream if invalid
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
-        String ct = meta.getContentType();
-        if (ct != null && !ct.isBlank()) {
+        String contentType = imageResponse.getContentType();
+        if (contentType != null && !contentType.isBlank()) {
             try { 
-                mediaType = MediaType.parseMediaType(ct); 
+                mediaType = MediaType.parseMediaType(contentType); 
             } catch (org.springframework.http.InvalidMediaTypeException ignored) {}
         }
 
-        String filename = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
-
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.inline().filename(filename).toString())
+                        ContentDisposition.inline().filename(imageResponse.getFilename()).toString())
                 .contentType(mediaType)
-                .contentLength(meta.getContentLength())
+                .contentLength(imageResponse.getContentLength())
                 .body(resource);
     }
 }

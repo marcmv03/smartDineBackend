@@ -2,8 +2,6 @@ package com.smartDine.controllers;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -30,7 +28,6 @@ import com.smartDine.entity.Business;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.User;
 import com.smartDine.services.RestaurantService;
-import com.smartDine.services.S3Service;
 
 import jakarta.validation.Valid;
 
@@ -40,8 +37,6 @@ import jakarta.validation.Valid;
 public class RestaurantController {
     @Autowired
     private RestaurantService restaurantService;
-    @Autowired
-    private S3Service s3Service;
 
     /**
      * GET /restaurants - Get all restaurants or search by name
@@ -105,33 +100,23 @@ public class RestaurantController {
     public ResponseEntity<UploadResponse> upload(
             @PathVariable Long id,
             @RequestPart("file") MultipartFile file,
-            @AuthenticationPrincipal User User ) throws java.io.IOException {
+            @AuthenticationPrincipal User user) throws java.io.IOException {
 
+        // Validate file
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        if( !(User instanceof Business) ) {
+        
+        // Validate user is BUSINESS
+        if (!(user instanceof Business)) {
             throw new BadCredentialsException("Only business owners can upload restaurant images");
         }
-        Restaurant restaurant = restaurantService.getRestaurantById(id);
-        if(!Objects.equals(restaurant.getOwner().getId(), User.getId())) {
-        throw new BadCredentialsException("You are not the owner of this restaurant");
-        }
+        
+        // Delegate upload and assignment to service
+        UploadResponse response = restaurantService.uploadRestaurantImage(id, file, (Business) user);
+        URI location = URI.create("/api/images/" + response.getKey());
 
-        String ext = Optional.ofNullable(file.getOriginalFilename())
-                .filter(n -> n.contains("."))
-                .map(n -> n.substring(n.lastIndexOf('.') + 1))
-                .orElse("jpg");
-
-        String keyName = "restaurants/%d/images/%s.%s"
-                .formatted(id, java.util.UUID.randomUUID(), ext);
-
-        String url = s3Service.uploadFile(file, keyName); // errores gestionados por GlobalExceptionHandler
-        restaurantService.addImageToRestaurant(id, keyName);
-        UploadResponse body = new UploadResponse(keyName, url, file.getContentType(), file.getSize());
-        URI location = URI.create("/api/images/" + keyName);
-
-        return ResponseEntity.created(location).body(body);
+        return ResponseEntity.created(location).body(response);
     }
     
 }

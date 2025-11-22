@@ -1,10 +1,11 @@
 package com.smartDine.dto;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.smartDine.entity.Dish;
+import com.smartDine.entity.Drink;
 import com.smartDine.entity.MenuItem;
 
 import jakarta.validation.constraints.Min;
@@ -100,16 +101,18 @@ public abstract class MenuItemDTO {
         return this;
     }
     
+    public static MenuItemDTO fromEntity(MenuItem item) {
+        if (item instanceof Dish) {
+            return DishDTO.fromEntity((com.smartDine.entity.Dish) item);
+        } else if (item instanceof Drink) {
+            return DrinkDTO.fromEntity((com.smartDine.entity.Drink) item);
+        }
+        throw new IllegalArgumentException("Unknown MenuItem type: " + item.getClass());
+    }
+
     public static List<MenuItemDTO> fromEntity(List<MenuItem> menuItems) {
         return menuItems.stream()
-            .map(item -> {
-                if (item instanceof com.smartDine.entity.Dish) {
-                    return DishDTO.fromEntity((com.smartDine.entity.Dish) item);
-                } else if (item instanceof com.smartDine.entity.Drink) {
-                    return DrinkDTO.fromEntity((com.smartDine.entity.Drink) item);
-                }
-                throw new IllegalArgumentException("Unknown MenuItem type: " + item.getClass());
-            })
+            .map(MenuItemDTO::fromEntity)
             .collect(Collectors.toList());
     }
 }

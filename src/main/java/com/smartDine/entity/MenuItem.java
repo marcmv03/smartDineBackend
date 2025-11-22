@@ -7,7 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
-
+import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,19 +33,11 @@ public abstract class MenuItem {
     
     @Column(nullable = false)
     private Double price;
+    
+    @Column(name = "image_url")
+    private String imageUrl;
 
-    public MenuItem setName(String name) {
-        this.name = name;
-        return this;
-    }
-    
-    public MenuItem setDescription(String description) {
-        this.description = description;
-        return this;
-    }
-    
-    public MenuItem setPrice(Double price) {
-        this.price = price;
-        return this;
-    }
+    @ManyToOne
+    private Restaurant restaurant;
+
 }

@@ -1,11 +1,16 @@
 package com.smartDine.services;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.smartDine.adapters.ImageAdapter;
 import com.smartDine.dto.RestaurantDTO;
+import com.smartDine.dto.UploadResponse;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.MenuItem;
 import com.smartDine.entity.Restaurant;
@@ -17,6 +22,9 @@ import com.smartDine.repository.RestaurantRepository;
 public class RestaurantService {
     @Autowired 
     private RestaurantRepository restaurantRepository;
+    
+    @Autowired
+    private ImageAdapter imageAdapter;
     
     /**
      * Get all restaurants or search by name
@@ -166,11 +174,49 @@ public class RestaurantService {
             .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
         return restaurant.getTables();
     }
-    public void addImageToRestaurant(Long restaurantId, String imageUrl) {
+    
+    /**
+     * Uploads an image for a restaurant and assigns it to the restaurant entity.
+     * Validates that the business user owns the restaurant.
+     * 
+     * @param restaurantId the ID of the restaurant
+     * @param file the image file to upload
+     * @param business the business owner
+     * @return UploadResponse containing upload details
+     * @throws IOException if the upload fails
+     * @throws IllegalArgumentException if validation fails
+     */
+    public UploadResponse uploadRestaurantImage(Long restaurantId, MultipartFile file, Business business) throws IOException {
+        // Validate restaurant ownership
+        if (!isOwnerOfRestaurant(restaurantId, business)) {
+            throw new IllegalArgumentException("You do not own this restaurant");
+        }
+        
+        // Validate file
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be null or empty");
+        }
+        
+        // Extract file extension
+        String ext = Optional.ofNullable(file.getOriginalFilename())
+            .filter(n -> n.contains("."))
+            .map(n -> n.substring(n.lastIndexOf('.') + 1))
+            .orElse("jpg");
+        
+        // Generate S3 key/path
+        String keyName = "restaurants/%d/images/%s.%s"
+            .formatted(restaurantId, java.util.UUID.randomUUID(), ext);
+        
+        // Upload image using the adapter
+        UploadResponse response = imageAdapter.uploadImage(file, keyName);
+        
+        // Assign the image to the restaurant
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
             .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
-        restaurant.setImageUrl(imageUrl);
+        restaurant.setImageUrl(keyName);
         restaurantRepository.save(restaurant);
+        
+        return response;
     }
 
     public List<Restaurant> getRestaurantsByOwner(Business business) {

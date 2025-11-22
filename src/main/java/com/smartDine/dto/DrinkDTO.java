@@ -4,7 +4,6 @@ import com.smartDine.entity.Drink;
 import com.smartDine.entity.DrinkType;
 
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -31,6 +30,7 @@ public class DrinkDTO extends MenuItemDTO {
             // Note: We can't set id directly on Drink, it's managed by JPA
             // The id will be set when retrieved from database
         }
+
         drink.setName(dto.getName());
         drink.setDescription(dto.getDescription());
         drink.setPrice(dto.getPrice());
@@ -44,6 +44,7 @@ public class DrinkDTO extends MenuItemDTO {
         dto.setName(drink.getName());
         dto.setDescription(drink.getDescription());
         dto.setPrice(drink.getPrice());
+        dto.setImageUrl(dto.getImageUrl()) ;
         dto.setItemType("DRINK");
         dto.setDrinkType(drink.getDrinkType());
         return dto;

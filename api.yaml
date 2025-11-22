@@ -6,7 +6,7 @@ info:
     REST API that powers the SmartDine platform for restaurant discovery, menu management,
     reservations, tables, time slots, and user authentication.
 servers:
-  - url: https://localhost:8443
+  - url: https://smartdine-service.switzerlandnorth.cloudapp.azure.com:8443
     description: Local development server (HTTPS)
   - url: http://localhost:8080
     description: Local development server (HTTP)
@@ -25,6 +25,8 @@ tags:
     description: Create and manage customer reservations.
   - name: User Profile
     description: Retrieve the authenticated user profile.
+  - name: Images
+    description: Upload and retrieve images for restaurants and menu items.
 paths:
   /smartdine/api/auth/register/customer:
     post:
@@ -263,6 +265,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/restaurants/{restaurantId}/images:
+    post:
+      tags:
+        - Images
+      summary: Upload an image for a restaurant
+      operationId: uploadRestaurantImage
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the restaurant
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file to upload (JPEG, PNG, etc.)
+      responses:
+        '201':
+          description: Image uploaded successfully
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URI to retrieve the uploaded image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Bad request - file is empty or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - authentication required
+        '403':
+          description: Forbidden - user is not a business owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Restaurant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /smartdine/api/restaurants/{restaurantId}/menu-items:
     post:
       tags:
@@ -342,6 +405,123 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MenuItem'
+  /smartdine/api/restaurants/{restaurantId}/menu-items/{menuItemId}/images:
+    post:
+      tags:
+        - Images
+      summary: Upload an image for a menu item
+      operationId: uploadMenuItemImage
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the restaurant
+        - in: path
+          name: menuItemId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the menu item
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file to upload (JPEG, PNG, etc.)
+      responses:
+        '201':
+          description: Image uploaded successfully
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URI to retrieve the uploaded image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Bad request - file is empty or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - authentication required
+        '403':
+          description: Forbidden - user is not the restaurant owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Restaurant or menu item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/images:
+    get:
+      tags:
+        - Images
+      summary: Retrieve an image by its storage key
+      operationId: getImage
+      parameters:
+        - in: query
+          name: key
+          required: true
+          schema:
+            type: string
+          description: Storage key of the image (e.g., "restaurants/1/images/uuid.jpg")
+          example: "restaurants/1/images/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg"
+      responses:
+        '200':
+          description: Image retrieved successfully
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Inline disposition with filename
+            Content-Type:
+              schema:
+                type: string
+              description: MIME type of the image
+            Content-Length:
+              schema:
+                type: integer
+              description: Size of the image in bytes
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /smartdine/api/restaurants/{restaurantId}/timeslots:
     post:
       tags:
@@ -682,6 +862,32 @@ components:
         email:
           type: string
           format: email
+    UploadResponse:
+      type: object
+      required:
+        - key
+        - url
+        - contentType
+        - size
+      properties:
+        key:
+          type: string
+          description: Storage key/path for the uploaded file.
+          example: restaurants/1/images/550e8400-e29b-41d4-a716-446655440000.jpg
+        url:
+          type: string
+          format: uri
+          description: Public URL to access the uploaded file.
+          example: https://smartdine-s3-bucket.s3.us-east-1.amazonaws.com/restaurants/1/images/550e8400-e29b-41d4-a716-446655440000.jpg
+        contentType:
+          type: string
+          description: MIME type of the uploaded file.
+          example: image/jpeg
+        size:
+          type: integer
+          format: int64
+          description: Size of the uploaded file in bytes.
+          example: 245678
     ErrorResponse:
       type: object
       properties:

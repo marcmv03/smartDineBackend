@@ -36,7 +36,7 @@ public class S3Service {
         PutObjectRequest put = new PutObjectRequest(
                 bucketName,
                 keyName,
-                toInputStream(file),
+                file.getInputStream(),
                 metadata
         ).withCannedAcl(CannedAccessControlList.PublicRead);
 
@@ -64,14 +64,5 @@ public class S3Service {
      */
     public ObjectMetadata getMetadata(String keyName) {
         return amazonS3.getObjectMetadata(bucketName, keyName);
-    }
-
-    private static java.io.InputStream toInputStream(MultipartFile file) throws IOException {
-        try {
-            return file.getInputStream();
-            // Deje que su GlobalExceptionHandler lo gestione si relanza como RuntimeException
-        } catch (IOException e) {
-            throw new IOException("No se pudo leer el archivo a subir", e);
-        }
     }
 }
