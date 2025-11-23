@@ -140,18 +140,5 @@ public void addImage(Long menuItemId, String imageUrl) {
         return response;
     }
     
-    /**
-     * Assigns an image URL to a MenuItem entity.
-     * 
-     * @param menuItemId the ID of the menu item
-     * @param imageUrl the S3 key name to assign
-     * @throws IllegalArgumentException if menu item not found
-     */
-    @Transactional
-    public void assignImageToMenuItem(Long menuItemId, String imageUrl) {
-        MenuItem menuItem = menuItemRepository.findById(menuItemId)
-            .orElseThrow(() -> new IllegalArgumentException("Menu item not found with ID: " + menuItemId));
-        menuItem.setImageUrl(imageUrl);
-        menuItemRepository.save(menuItem);
-    }
+
 }
