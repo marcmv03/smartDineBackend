@@ -47,4 +47,7 @@ public class Reservation {
 
     @Column(name = "created_at", nullable = false)
     private LocalDate createdAt;
+
+    @Column(name = "status")
+    private ReservationStatus status;
 }

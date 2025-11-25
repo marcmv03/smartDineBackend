@@ -140,5 +140,28 @@ public void addImage(Long menuItemId, String imageUrl) {
         return response;
     }
     
+    @Transactional
+    public void deleteMenuItem(Long restaurantId, Long menuItemId, Business business) {
+        if (business == null || business.getId() == null) {
+            throw new IllegalArgumentException("Business owner is required to delete a menu item");
+        }
+        
+        // Validate restaurant ownership
+        if (!restaurantService.isOwnerOfRestaurant(restaurantId, business)) {
+            throw new IllegalArgumentException("Business is not the owner of the restaurant");
+        }
+        
+        // Validate menu item exists
+        MenuItem menuItem = menuItemRepository.findById(menuItemId)
+            .orElseThrow(() -> new IllegalArgumentException("Menu item not found with ID: " + menuItemId));
+        
+        // Validate menu item belongs to the restaurant
+        if (!menuItem.getRestaurant().getId().equals(restaurantId)) {
+            throw new IllegalArgumentException("Menu item does not belong to the specified restaurant");
+        }
+        
+        // Delete the menu item
+        menuItemRepository.delete(menuItem);
+    }
 
 }

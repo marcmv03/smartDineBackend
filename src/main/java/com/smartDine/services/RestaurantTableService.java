@@ -115,4 +115,30 @@ public class RestaurantTableService {
         return tableRepository.findById(tableId)
             .orElseThrow(() -> new IllegalArgumentException("Table not found with id: " + tableId));
     }
+    
+    @Transactional
+    public void deleteTable(Long restaurantId, Long tableId, Business business) {
+        if (business == null || business.getId() == null) {
+            throw new IllegalArgumentException("Business owner is required to delete a table");
+        }
+        
+        // Verify that the restaurant exists
+        Restaurant restaurant = restaurantService.getRestaurantById(restaurantId);
+        
+        // Verify that the business is the owner of the restaurant
+        if (!restaurantService.isOwnerOfRestaurant(restaurant.getId(), business)) {
+            throw new IllegalArgumentException("Business is not the owner of the restaurant");
+        }
+        
+        // Verify that the table exists
+        RestaurantTable table = getTableById(tableId);
+        
+        // Verify that the table belongs to the restaurant
+        if (!table.getRestaurant().getId().equals(restaurantId)) {
+            throw new IllegalArgumentException("Table does not belong to the specified restaurant");
+        }
+        
+        // Delete the table
+        tableRepository.delete(table);
+    }
 }

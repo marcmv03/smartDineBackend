@@ -57,5 +57,32 @@ public class TimeSlotService {
     @Transactional(readOnly = true)
     public List<TimeSlot> getTimeSlotsForRestaurantByDay(Long restaurantId, java.time.DayOfWeek dayOfWeek) {
         return timeSlotRepository.findByRestaurantIdAndDayOfWeek(restaurantId, dayOfWeek);
-}
+    }
+    
+    @Transactional
+    public void deleteTimeSlot(Long restaurantId, Long timeSlotId, Business business) {
+        if (business == null || business.getId() == null) {
+            throw new IllegalArgumentException("Business owner is required to delete a time slot");
+        }
+        
+        // Verify that the restaurant exists
+        Restaurant restaurant = restaurantService.getRestaurantById(restaurantId);
+        
+        // Verify that the business is the owner of the restaurant
+        if (!restaurantService.isOwnerOfRestaurant(restaurant.getId(), business)) {
+            throw new IllegalArgumentException("Business is not the owner of the restaurant");
+        }
+        
+        // Verify that the time slot exists
+        TimeSlot timeSlot = timeSlotRepository.findById(timeSlotId)
+            .orElseThrow(() -> new IllegalArgumentException("Time slot not found with id: " + timeSlotId));
+        
+        // Verify that the time slot belongs to the restaurant
+        if (!timeSlot.getRestaurant().getId().equals(restaurantId)) {
+            throw new IllegalArgumentException("Time slot does not belong to the specified restaurant");
+        }
+        
+        // Delete the time slot
+        timeSlotRepository.delete(timeSlot);
+    }
 }

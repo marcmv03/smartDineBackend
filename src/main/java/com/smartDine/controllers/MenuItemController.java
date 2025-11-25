@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -100,6 +101,31 @@ public class MenuItemController {
         URI location = URI.create("/api/images/" + response.getKey());
         
         return ResponseEntity.created(location).body(response);
+    }
+    
+    /**
+     * DELETE /smartdine/api/restaurants/{restaurantId}/menu-items/{menuItemId} - Delete a menu item
+     */
+    @DeleteMapping("/restaurants/{restaurantId}/menu-items/{menuItemId}")
+    public ResponseEntity<Void> deleteMenuItem(
+            @PathVariable Long restaurantId,
+            @PathVariable Long menuItemId,
+            @AuthenticationPrincipal User user) {
+        
+        // Validate user is not null
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        // Validate user is BUSINESS
+        if (!(user instanceof Business)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
+        // Delete the menu item
+        menuItemService.deleteMenuItem(restaurantId, menuItemId, (Business) user);
+        
+        return ResponseEntity.noContent().build();
     }
 
 }

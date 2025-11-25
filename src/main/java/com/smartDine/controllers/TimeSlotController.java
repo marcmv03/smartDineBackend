@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,6 +60,31 @@ public class TimeSlotController {
         List<TimeSlotDTO> timeSlotDTOs = TimeSlotDTO.fromEntity(timeSlots);
         return ResponseEntity.ok(timeSlotDTOs);
         
+    }
+    
+    /**
+     * DELETE /smartdine/api/restaurants/{restaurantId}/timeslots/{timeSlotId} - Delete a time slot
+     */
+    @DeleteMapping("/timeslots/{timeSlotId}")
+    public ResponseEntity<Void> deleteTimeSlot(
+            @PathVariable Long restaurantId,
+            @PathVariable Long timeSlotId,
+            @AuthenticationPrincipal User user) {
+        
+        // Validate user is not null
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        // Validate user is BUSINESS or ADMIN
+        if (user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_BUSINESS) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
+        // Delete the time slot
+        timeSlotService.deleteTimeSlot(restaurantId, timeSlotId, (Business) user);
+        
+        return ResponseEntity.noContent().build();
     }
     
 }

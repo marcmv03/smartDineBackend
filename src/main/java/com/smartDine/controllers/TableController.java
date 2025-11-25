@@ -6,8 +6,10 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -90,7 +92,8 @@ public class TableController {
         
         // Validate that user is a Business
         if (!(user instanceof Business)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                throw new BadCredentialsException(
+                        "Only business owners can view restaurant tables");
         }
         
         // Get the tables
@@ -99,5 +102,30 @@ public class TableController {
         // Convert entities to DTOs and return
         List<RestaurantTableDTO> tableDTOs = RestaurantTableDTO.fromEntity(tables);
         return ResponseEntity.ok(tableDTOs);
+    }
+    
+    /**
+     * DELETE /smartdine/api/restaurants/{restaurantId}/tables/{tableId} - Delete a table
+     */
+    @DeleteMapping("/{tableId}")
+    public ResponseEntity<Void> deleteTable(
+            @PathVariable Long restaurantId,
+            @PathVariable Long tableId,
+            @AuthenticationPrincipal User user) {
+        
+        // Validate that user is not null
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        // Validate that user is a Business
+        if (!(user instanceof Business)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
+        // Delete the table
+        tableService.deleteTable(restaurantId, tableId, (Business) user);
+        
+        return ResponseEntity.noContent().build();
     }
 }
