@@ -106,9 +106,9 @@ public class MenuItemController {
     /**
      * DELETE /smartdine/api/restaurants/{restaurantId}/menu-items/{menuItemId} - Delete a menu item
      */
-    @DeleteMapping("/restaurants/{restaurantId}/menu-items/{menuItemId}")
+    @DeleteMapping("/menu-items/{menuItemId}")
     public ResponseEntity<Void> deleteMenuItem(
-            @PathVariable Long restaurantId,
+    
             @PathVariable Long menuItemId,
             @AuthenticationPrincipal User user) {
         
@@ -116,6 +116,7 @@ public class MenuItemController {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        Long restaurantId = menuItemService.getMenuItemById(menuItemId).getRestaurant().getId() ;
         
         // Validate user is BUSINESS
         if (!(user instanceof Business)) {

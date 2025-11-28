@@ -83,4 +83,8 @@ public class ImageS3Adapter implements ImageAdapter {
             throw new IllegalArgumentException("Failed to retrieve image with key: " + key, e);
         }
     }
+    @Override
+    public void deleteImage(String key) {
+        adaptee.deleteFile(key);
+    }
 }

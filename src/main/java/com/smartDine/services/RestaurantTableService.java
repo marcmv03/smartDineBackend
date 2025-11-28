@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ import com.smartDine.entity.Business;
 import com.smartDine.entity.Reservation;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
+import com.smartDine.exceptions.RelatedEntityException;
 import com.smartDine.repository.ReservationRepository;
 import com.smartDine.repository.RestaurantTableRepository;
 
@@ -117,7 +119,8 @@ public class RestaurantTableService {
     }
     
     @Transactional
-    public void deleteTable(Long restaurantId, Long tableId, Business business) {
+    public void deleteTable(Long restaurantId, Long tableId, Business business)throws RelatedEntityException {
+        try {
         if (business == null || business.getId() == null) {
             throw new IllegalArgumentException("Business owner is required to delete a table");
         }
@@ -140,5 +143,12 @@ public class RestaurantTableService {
         
         // Delete the table
         tableRepository.delete(table);
+        tableRepository.flush(); // Forzar la ejecución inmediata para capturar excepciones de integridad referencial
     }
+    catch(DataIntegrityViolationException e ) {
+                throw new RelatedEntityException("No se puede eliminar la mesa porque tiene reservas asociadas.");
+
+
+    }
+}
 }

@@ -3,6 +3,7 @@ package com.smartDine.services;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,6 +11,7 @@ import com.smartDine.dto.TimeSlotDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.TimeSlot;
+import com.smartDine.exceptions.RelatedEntityException;
 import com.smartDine.repository.TimeSlotRepository;
 
 @Service
@@ -81,8 +83,14 @@ public class TimeSlotService {
         if (!timeSlot.getRestaurant().getId().equals(restaurantId)) {
             throw new IllegalArgumentException("Time slot does not belong to the specified restaurant");
         }
+        try {
         
         // Delete the time slot
         timeSlotRepository.delete(timeSlot);
+        timeSlotRepository.flush() ;
+        }
+        catch(DataIntegrityViolationException e ) {
+            throw new RelatedEntityException("No se puede eliminar el intervalo de tiempo porque tiene reservas asociadas.");
     }
+}
 }

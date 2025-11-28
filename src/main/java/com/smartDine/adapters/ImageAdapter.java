@@ -32,4 +32,11 @@ public interface ImageAdapter {
      * @throws IllegalArgumentException if the image is not found
      */
     ImageResponseDTO getImage(String key);
+
+    /**
+     * Deletes an image from the storage system.
+     * 
+     * @param key the key/path of the image to delete
+     */
+    void deleteImage(String key);
 }

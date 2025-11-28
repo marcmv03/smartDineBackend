@@ -155,13 +155,10 @@ public void addImage(Long menuItemId, String imageUrl) {
         MenuItem menuItem = menuItemRepository.findById(menuItemId)
             .orElseThrow(() -> new IllegalArgumentException("Menu item not found with ID: " + menuItemId));
         
-        // Validate menu item belongs to the restaurant
-        if (!menuItem.getRestaurant().getId().equals(restaurantId)) {
-            throw new IllegalArgumentException("Menu item does not belong to the specified restaurant");
-        }
-        
         // Delete the menu item
         menuItemRepository.delete(menuItem);
+        menuItemRepository.flush() ; 
+        imageAdapter.deleteImage(menuItem.getImageUrl());
     }
 
 }

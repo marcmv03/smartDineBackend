@@ -12,9 +12,14 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.servlet.resource.NoResourceFoundException ;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.smartDine.dto.ErrorDTO;
+import com.smartDine.dto.ValidationErrorDTO;
+import com.smartDine.exceptions.RelatedEntityException;
 
 import io.jsonwebtoken.ExpiredJwtException; 
+
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -22,9 +27,8 @@ public class GlobalExceptionHandler {
      * Handle validation errors for @Valid annotations
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationExceptions(
+    public ResponseEntity<ErrorDTO> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
-        Map<String, Object> response = new HashMap<>();
         Map<String, String> errors = new HashMap<>();
         
         ex.getBindingResult().getFieldErrors().forEach(error -> {
@@ -33,87 +37,111 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
         
-        response.put("success", false);
-        response.put("message", "Errores de validación");
-        response.put("errors", errors);
+        ValidationErrorDTO errorDTO = new ValidationErrorDTO(
+            HttpStatus.BAD_REQUEST.value(),
+            "Errores de validación",
+            errors
+        );
         
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(errorDTO, HttpStatus.BAD_REQUEST);
     }
 
     /**
      * Handle business logic exceptions (IllegalArgumentException)
      */
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", ex.getMessage());
+    public ResponseEntity<ErrorDTO> handleIllegalArgumentException(IllegalArgumentException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.BAD_REQUEST.value(),
+            ex.getMessage()
+        );
         
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(errorDTO, HttpStatus.BAD_REQUEST);
     }
 
     /**
      * Handle generic exceptions
      */
     @ExceptionHandler(BadCredentialsException.class) 
-    public ResponseEntity<Map<String, Object>> handleBadCredentialsException(BadCredentialsException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", ex.getMessage());
+    public ResponseEntity<ErrorDTO> handleBadCredentialsException(BadCredentialsException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.UNAUTHORIZED.value(),
+            ex.getMessage()
+        );
         
-        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>(errorDTO, HttpStatus.UNAUTHORIZED);
     }
+
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNoResourceFoundException(NoResourceFoundException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", "The requested resource was not found");
+    public ResponseEntity<ErrorDTO> handleNoResourceFoundException(NoResourceFoundException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.NOT_FOUND.value(),
+            "The requested resource was not found"
+        );
         
-        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(errorDTO, HttpStatus.NOT_FOUND);
     }
+
     @ExceptionHandler(HttpMessageNotReadableException.class) 
-    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", "Malformed JSON request");
+    public ResponseEntity<ErrorDTO> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.BAD_REQUEST.value(),
+            "Malformed JSON request"
+        );
         
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(errorDTO, HttpStatus.BAD_REQUEST);
     }
+
     @ExceptionHandler(IOException.class) 
-        public ResponseEntity<Map<String, Object>> handleIOException(IOException ex) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error de entrada/salida: " + ex.getMessage());
-            
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public ResponseEntity<ErrorDTO> handleIOException(IOException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            "Error de entrada/salida: " + ex.getMessage()
+        );
+        
+        return new ResponseEntity<>(errorDTO, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @ExceptionHandler(ExpiredJwtException.class)
-    public ResponseEntity<Map<String, Object>> handleExpiredJwtException(ExpiredJwtException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", "El token ha expirado. Por favor, inicie sesión de nuevo.");
+    public ResponseEntity<ErrorDTO> handleExpiredJwtException(ExpiredJwtException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.UNAUTHORIZED.value(),
+            "El token ha expirado. Por favor, inicie sesión de nuevo."
+        );
         
-        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>(errorDTO, HttpStatus.UNAUTHORIZED);
     }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<Map<String, Object>> handleMethodNotSupportedException(HttpRequestMethodNotSupportedException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", "HTTP method not supported: " + ex.getMethod());
+    public ResponseEntity<ErrorDTO> handleMethodNotSupportedException(HttpRequestMethodNotSupportedException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.METHOD_NOT_ALLOWED.value(),
+            "HTTP method not supported: " + ex.getMethod()
+        );
         
-        return new ResponseEntity<>(response, HttpStatus.METHOD_NOT_ALLOWED);
+        return new ResponseEntity<>(errorDTO, HttpStatus.METHOD_NOT_ALLOWED);
     }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", "Ha ocurrido un error interno del servidor");
-        
+    public ResponseEntity<ErrorDTO> handleGeneralException(Exception ex) {
         // Log the actual error for debugging
         System.err.println("Unexpected error: " + ex.getMessage());
         ex.printStackTrace();
         
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            "Ha ocurrido un error interno del servidor"
+        );
+        
+        return new ResponseEntity<>(errorDTO, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+    @ExceptionHandler(RelatedEntityException.class)
+    public ResponseEntity<ErrorDTO> handleRelatedEntityException(RelatedEntityException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.CONFLICT.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
 
+}
 }
