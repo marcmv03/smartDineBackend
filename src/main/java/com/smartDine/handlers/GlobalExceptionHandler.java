@@ -2,6 +2,7 @@ package com.smartDine.handlers;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -10,12 +11,15 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.smartDine.dto.ErrorDTO;
+import com.smartDine.dto.QueryParameterErrorDTO;
 import com.smartDine.dto.ValidationErrorDTO;
+import com.smartDine.exceptions.MissingQueryParamException;
 import com.smartDine.exceptions.RelatedEntityException;
 
 import io.jsonwebtoken.ExpiredJwtException; 
@@ -142,6 +146,30 @@ public class GlobalExceptionHandler {
             ex.getMessage()
         );
         return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
+    }
 
-}
+    @ExceptionHandler(MissingQueryParamException.class)
+    public ResponseEntity<QueryParameterErrorDTO> handleMissingQueryParamException(MissingQueryParamException ex) {
+        QueryParameterErrorDTO errorDTO = new QueryParameterErrorDTO(
+            HttpStatus.BAD_REQUEST.value(),
+            "Faltan query params requeridos",
+            ex.getMissingParams()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle Spring's MissingServletRequestParameterException
+     * This is thrown when @RequestParam(required=true) parameters are missing
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<QueryParameterErrorDTO> handleMissingServletRequestParameter(
+            MissingServletRequestParameterException ex) {
+        QueryParameterErrorDTO errorDTO = new QueryParameterErrorDTO(
+            HttpStatus.BAD_REQUEST.value(),
+            "Faltan query params requeridos",
+            List.of(ex.getParameterName())
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.BAD_REQUEST);
+    }
 }

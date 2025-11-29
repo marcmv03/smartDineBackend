@@ -21,4 +21,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
         @Param("date") java.time.LocalDate date,
         @Param("timeSlotId") Long timeSlotId
     );
+
+    List<Reservation> findByRestaurantIdAndDate(Long restaurantId, java.time.LocalDate date);
 }

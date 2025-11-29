@@ -19,6 +19,8 @@ Quick facts (where to look)
 - Security: `src/main/java/com/smartDine/configs/SecurityConfig.java` and `JwtAuthenticationFilter.java`.
 - Tests: `src/test/java` and `src/test/resources/application-test.properties` (H2 in-memory DB).
 - Api documentation : api.yaml
+- **Adapters**: `src/main/java/com/smartDine/adapters` — Adapter pattern implementations (e.g., `ImageAdapter` interface with `ImageS3Adapter` for S3 storage).
+- **Custom Exceptions**: `src/main/java/com/smartDine/exceptions` — Custom exception classes (e.g., `RelatedEntityException`).
 - **Static files (images)**: AWS S3 bucket configured via `S3Service` and `S3Config`. See "AWS S3 Storage" section below.
 
 AWS S3 Storage for Static Files
@@ -69,6 +71,53 @@ Coding and change rules
 - Use Lombok getters/setters only where already present; don't introduce Lombok in new files unless consistent with repository style.
 - **Controllers MUST return DTOs, never entities**. All the fields of the DTO should be scalar values or arrays, but never other entities.
 - The exceptions are handled by global exception handler, located in package com.smartdine.handlers
+
+Dependency Injection Style (IMPORTANT)
+- **Preferred pattern: Constructor injection** for new code (see `ReservationController`, `ReservationService` for examples)
+- Constructor injection makes dependencies explicit, improves testability, and allows final fields
+- **Example pattern** (preferred for new controllers/services):
+  ```java
+  @RestController
+  public class ReservationController {
+      private final ReservationService reservationService;
+      private final CustomerService customerService;
+
+      public ReservationController(ReservationService reservationService, CustomerService customerService) {
+          this.reservationService = reservationService;
+          this.customerService = customerService;
+      }
+  }
+  ```
+- **Existing `@Autowired` field injection is acceptable** in existing code (e.g., `RestaurantController`, `TableController`)
+- When modifying existing classes, follow the existing style in that file for consistency
+- For new classes, prefer constructor injection
+
+Validation Annotations (DTOs)
+- Use Jakarta Bean Validation annotations on DTO fields:
+  - `@NotNull(message = "...")` — for required fields
+  - `@NotBlank(message = "...")` — for required non-empty strings
+  - `@Min(value = X, message = "...")` — for minimum numeric values
+  - `@Size(max = X, message = "...")` — for string length constraints
+- Controllers use `@Valid @RequestBody` to trigger validation
+- Validation errors are handled by `GlobalExceptionHandler.handleValidationExceptions()` returning `ValidationErrorDTO`
+- **Example** (from `RestaurantTableDTO`):
+  ```java
+  @NotNull(message = "Table number is required")
+  @Min(value = 1, message = "Table number must be at least 1")
+  private Integer number;
+  ```
+
+Authorization Patterns in Controllers
+- Check `user == null` first, return `HttpStatus.UNAUTHORIZED` 
+- Check role/type with `user.getRole()` or `instanceof`, return `HttpStatus.FORBIDDEN` or throw `BadCredentialsException`
+- For business-only endpoints, throw `BadCredentialsException` for clearer error messages:
+  ```java
+  if (!(user instanceof Business)) {
+      throw new BadCredentialsException("Only business owners can perform this action");
+  }
+  ```
+- Cast safely after instanceof check: `Business business = (Business) user;`
+- Delegate ownership validation to service layer: `restaurantService.isOwnerOfRestaurant(id, business)`
 
 DTO and Entity Conversion Rules (CRITICAL)
 - **All DTOs must have an `id` field** with getters and setters.
@@ -151,8 +200,8 @@ Edge cases and pitfalls known in this repo
 
 Entity and DTO Structure Guide
 - **Restaurant**: 
-  - Entity has: `id`, `name`, `address`, `description`, `owner` (Business), `menu` (List<MenuItem>), `timeSlots` (List<TimeSlot>)
-  - DTO has: `id`, `name`, `address`, `description` (no nested objects)
+  - Entity has: `id`, `name`, `address`, `description`, `imageUrl`, `owner` (Business), `menu` (List<MenuItem>), `timeSlots` (List<TimeSlot>), `tables` (List<RestaurantTable>)
+  - DTO has: `id`, `name`, `address`, `description`, `imageUrl` (no nested objects)
 - **MenuItem** (abstract):
   - Entity has: `id`, `name`, `description`, `price`
   - DTO has: `id`, `name`, `description`, `price`, `imageUrl`, `itemType`
@@ -160,6 +209,13 @@ Entity and DTO Structure Guide
 - **TimeSlot**:
   - Entity has: `id`, `startTime`, `endTime`, `dayOfWeek`, `restaurant` (Restaurant)
   - DTO has: `id`, `startTime`, `endTime`, `dayOfWeek`, `restaurantId` (Long, not Restaurant object)
+- **RestaurantTable**:
+  - Entity has: `id`, `number`, `capacity`, `outside`, `restaurant` (Restaurant)
+  - DTO has: `id`, `number`, `capacity`, `outside`, `restaurantId` (Long)
+- **Reservation**:
+  - Entity has: `id`, `customer` (Customer), `restaurant` (Restaurant), `timeSlot` (TimeSlot), `restaurantTable` (RestaurantTable), `date`, `numGuests`, `createdAt`, `status`
+  - DTO has: `id`, `timeSlotId`, `restaurantId`, `tableId`, `customerId`, `numCustomers`, `date`
+  - **Multiple DTOs exist**: `ReservationDTO` (for creation), `ReservationDetailsDTO` (for customer view), `RestaurantReservationDTO` (for business view)
 - **Customer**:
   - Entity extends `User`: `id`, `name`, `email`, `password`, `phoneNumber`
   - DTO has: `id`, `name`, `email`, `password`, `phoneNumber` (as String)

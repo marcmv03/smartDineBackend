@@ -3,6 +3,7 @@ package com.smartDine.services;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -128,6 +129,53 @@ class ReservationServiceTest {
         );
 
         assertEquals("Table not found with id: 999", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should get reservations for restaurant by date as owner")
+    void getReservationsByRestaurantAndDateAsOwner() {
+        Business owner = createBusiness("Owner5", "owner5@smartdine.com", 999999999L);
+        Restaurant restaurant = createRestaurant(owner, "Owner Restaurant 5");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.TUESDAY, 18.0, 20.0);
+        RestaurantTable table = createTable(restaurant, 5, 4);
+        Customer customer = createCustomer("Eve", "eve@smartdine.com", 111222333L);
+
+        LocalDate reservationDate = LocalDate.now().plusDays(3);
+        
+        // Create a reservation
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(3);
+        dto.setDate(reservationDate);
+        reservationService.createReservation(dto, customer);
+
+        // Get reservations as owner
+        List<Reservation> reservations = reservationService.getReservationsByRestaurantAndDate(
+            restaurant.getId(), reservationDate, owner);
+        
+        assertNotNull(reservations);
+        assertEquals(1, reservations.size());
+        assertEquals(customer.getName(), reservations.get(0).getCustomer().getName());
+        assertEquals(table.getNumber(), reservations.get(0).getRestaurantTable().getNumber());
+    }
+
+    @Test
+    @DisplayName("Should fail to get reservations when not owner")
+    void getReservationsByRestaurantAndDateAsNonOwner() {
+        Business owner = createBusiness("Owner6", "owner6@smartdine.com", 888777666L);
+        Business nonOwner = createBusiness("NonOwner", "nonowner@smartdine.com", 555444333L);
+        Restaurant restaurant = createRestaurant(owner, "Owner Restaurant 6");
+
+        LocalDate reservationDate = LocalDate.now().plusDays(4);
+
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> reservationService.getReservationsByRestaurantAndDate(restaurant.getId(), reservationDate, nonOwner)
+        );
+
+        assertEquals("You are not the owner of this restaurant", exception.getMessage());
     }
 
     private Business createBusiness(String name, String email, Long phoneNumber) {

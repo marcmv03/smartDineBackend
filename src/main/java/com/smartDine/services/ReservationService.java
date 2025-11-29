@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.smartDine.dto.ReservationDTO;
+import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
 import com.smartDine.entity.Restaurant;
@@ -68,5 +69,13 @@ public class ReservationService {
     @Transactional(readOnly = true)
     public List<Reservation> getReservationsByRestaurantAndDateAndTimeSlot(Long restaurantId, java.time.LocalDate date, Long timeSlotId) {
         return reservationRepository.findByRestaurantIdAndDateAndTimeSlotId(restaurantId, date, timeSlotId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Reservation> getReservationsByRestaurantAndDate(Long restaurantId, LocalDate date, Business business) {
+        if (!restaurantService.isOwnerOfRestaurant(restaurantId, business)) {
+            throw new IllegalArgumentException("You are not the owner of this restaurant");
+        }
+        return reservationRepository.findByRestaurantIdAndDate(restaurantId, date);
     }
 }

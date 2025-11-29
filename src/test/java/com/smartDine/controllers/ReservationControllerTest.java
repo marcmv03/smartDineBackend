@@ -6,9 +6,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -16,9 +18,11 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 
 import com.smartDine.dto.ReservationDTO;
 import com.smartDine.dto.ReservationDetailsDTO;
+import com.smartDine.dto.RestaurantReservationDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
@@ -147,5 +151,44 @@ class ReservationControllerTest {
         businessUser.setId(3L);
         ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(businessUser);
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
+
+    @Test
+    void getRestaurantReservationsAsCustomerThrowsBadCredentials() {
+        assertThrows(BadCredentialsException.class, () -> 
+            reservationController.getRestaurantReservations(10L, reservationDate, customer)
+        );
+    }
+
+    @Test
+    void getRestaurantReservationsAsBusinessReturnsOk() {
+        Business businessUser = new Business();
+        businessUser.setId(5L);
+        businessUser.setName("Business Owner");
+
+        when(reservationService.getReservationsByRestaurantAndDate(eq(10L), eq(reservationDate), any(Business.class)))
+            .thenReturn(List.of(reservation));
+
+        ResponseEntity<List<RestaurantReservationDTO>> response = 
+            reservationController.getRestaurantReservations(10L, reservationDate, businessUser);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        
+        RestaurantReservationDTO dto = response.getBody().get(0);
+        assertEquals(40L, dto.getId());
+        assertEquals("Customer", dto.getUsername());
+        assertEquals(12.0, dto.getStartTime());
+        assertEquals(14.0, dto.getEndTime());
+        assertEquals(1, dto.getNumTable());
+        assertEquals(false, dto.getOutside());
+    }
+
+    @Test
+    void getRestaurantReservationsWithNullUserReturnsUnauthorized() {
+        ResponseEntity<List<RestaurantReservationDTO>> response = 
+            reservationController.getRestaurantReservations(10L, reservationDate, null);
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 }
