@@ -20,6 +20,7 @@ import lombok.Setter;
 public class RestaurantReservationDTO {
     private Long id;
     private String username;
+    private Long phoneNumber;
     private Double startTime;
     private Double endTime;
     private Integer numTable;
@@ -29,6 +30,7 @@ public class RestaurantReservationDTO {
         return new RestaurantReservationDTO(
             reservation.getId(),
             reservation.getCustomer().getName(),
+            reservation.getCustomer().getPhoneNumber(),
             reservation.getTimeSlot().getStartTime(),
             reservation.getTimeSlot().getEndTime(),
             reservation.getRestaurantTable().getNumber(),
