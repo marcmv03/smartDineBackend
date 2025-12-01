@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +36,6 @@ import com.smartDine.repository.MemberRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Transactional
 public class CommunityServiceTest {
 
@@ -180,5 +178,47 @@ public class CommunityServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> 
             communityService.uploadCommunityImage(community.getId(), file, testCustomer));
+    }
+
+    @Test
+    @DisplayName("Should get communities for user")
+    void testGetCommunitiesForUser() {
+        // Create multiple communities with different owners
+        CreateCommunityDTO dto1 = new CreateCommunityDTO();
+        dto1.setName("Business Community 1");
+        dto1.setDescription("Description 1");
+        dto1.setVisibility(true);
+        Community community1 = communityService.createCommunity(dto1, testBusiness);
+
+        CreateCommunityDTO dto2 = new CreateCommunityDTO();
+        dto2.setName("Customer Community 1");
+        dto2.setDescription("Description 2");
+        dto2.setVisibility(true);
+        Community community2 = communityService.createCommunity(dto2, testCustomer);
+
+        CreateCommunityDTO dto3 = new CreateCommunityDTO();
+        dto3.setName("Business Community 2");
+        dto3.setDescription("Description 3");
+        dto3.setVisibility(true);
+        Community community3 = communityService.createCommunity(dto3, testBusiness);
+
+        // Add testCustomer as member to community1
+        Member member = new Member();
+        member.setUser(testCustomer);
+        member.setCommunity(community1);
+        member.setMemberRole(MemberRole.PARTICIPANT);
+        memberRepository.save(member);
+
+        // Get communities for testBusiness (should be owner of 2 communities)
+        List<Community> businessCommunities = communityService.getCommunitiesForUser(testBusiness);
+        assertEquals(2, businessCommunities.size());
+        assertTrue(businessCommunities.stream().anyMatch(c -> c.getName().equals("Business Community 1")));
+        assertTrue(businessCommunities.stream().anyMatch(c -> c.getName().equals("Business Community 2")));
+
+        // Get communities for testCustomer (should be owner of 1 and member of 1 = 2 total)
+        List<Community> customerCommunities = communityService.getCommunitiesForUser(testCustomer);
+        assertEquals(2, customerCommunities.size());
+        assertTrue(customerCommunities.stream().anyMatch(c -> c.getName().equals("Customer Community 1")));
+        assertTrue(customerCommunities.stream().anyMatch(c -> c.getName().equals("Business Community 1")));
     }
 }

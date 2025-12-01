@@ -28,7 +28,7 @@ import com.smartDine.services.MemberService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/smartdine/api/communities")
+@RequestMapping("/smartdine/api/")
 public class CommunityController {
 
     @Autowired
@@ -37,19 +37,19 @@ public class CommunityController {
     @Autowired
     private MemberService memberService;
 
-    @GetMapping
+    @GetMapping("comunities")
     public ResponseEntity<List<CommunityDTO>> getCommunities(@RequestParam(required = false) String search) {
         List<Community> communities = communityService.getCommunities(search);
         return ResponseEntity.ok(CommunityDTO.fromEntity(communities));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("comunities/{id}")
     public ResponseEntity<CommunityDTO> getCommunityById(@PathVariable Long id) {
         Community community = communityService.getCommunityById(id);
         return ResponseEntity.ok(CommunityDTO.fromEntity(community));
     }
 
-    @PostMapping
+    @PostMapping("comunities")
     public ResponseEntity<CommunityDTO> createCommunity(
             @Valid @RequestBody CreateCommunityDTO createDTO,
             @AuthenticationPrincipal User user) {
@@ -57,7 +57,7 @@ public class CommunityController {
         return ResponseEntity.ok(CommunityDTO.fromEntity(community));
     }
 
-    @PostMapping("/{id}/members")
+    @PostMapping("comunities/{id}/members")
     public ResponseEntity<MemberDTO> joinCommunity(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
@@ -65,12 +65,17 @@ public class CommunityController {
         return ResponseEntity.ok(MemberDTO.fromEntity(member));
     }
 
-    @PostMapping("/{id}/image")
+    @PostMapping("comunities/{id}/image")
     public ResponseEntity<UploadResponse> uploadCommunityImage(
             @PathVariable Long id,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam() MultipartFile file,
             @AuthenticationPrincipal User user) throws IOException {
         UploadResponse response = communityService.uploadCommunityImage(id, file, user);
         return ResponseEntity.ok(response);
     }
+    @GetMapping("me/comunities")
+    public ResponseEntity<List<CommunityDTO>> getMyCommunities(@AuthenticationPrincipal User user) {
+        List<Community> communities = communityService.getCommunitiesForUser(user);
+        return ResponseEntity.ok(CommunityDTO.fromEntity(communities));
+}
 }

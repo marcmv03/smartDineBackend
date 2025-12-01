@@ -120,4 +120,11 @@ public class CommunityService {
 
         return response;
     }
+    @Transactional(readOnly = true)
+    public List<Community> getCommunitiesForUser(User user) {
+        List<Member> memberships = memberRepository.findByUser(user);
+        return memberships.stream()
+                .map(Member::getCommunity)
+                .toList();
+    }
 }

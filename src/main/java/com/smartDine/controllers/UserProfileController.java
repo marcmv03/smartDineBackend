@@ -64,5 +64,5 @@ public class UserProfileController {
         List<Restaurant> restaurants = restaurantService.getRestaurantsByOwner((Business)user) ;
         return RestaurantDTO.fromEntity(restaurants);
     }
-    
+
 }
