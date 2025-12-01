@@ -1,6 +1,5 @@
 package com.smartDine.controllers;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.smartDine.dto.auth.LoginRequest;
+import com.smartDine.dto.auth.LoginResponse;
 import com.smartDine.dto.auth.RegisterBusinessRequest;
 import com.smartDine.dto.auth.RegisterCustomerRequest;
 import com.smartDine.entity.User;
@@ -31,98 +31,34 @@ public class AuthenticationController {
     }
 
     @PostMapping("/register/customer")
-    public ResponseEntity<?> registerCustomer(@Valid @RequestBody RegisterCustomerRequest registerCustomerDto) {
-        try {
-            User registeredUser = authService.registerCustomer(registerCustomerDto);
-            String jwtToken = jwtService.generateToken(registeredUser);
-            
-            return ResponseEntity.ok(new LoginResponse(
-                jwtToken, 
-                jwtService.getExpirationTime(),
-                registeredUser.getId(),
-                registeredUser.getName(),
-                registeredUser.getEmail()
-            ));
-        } catch (DataIntegrityViolationException e) {
-            return ResponseEntity.badRequest().body(
-                new ErrorResponse("Ya existe un usuario con este email o número de teléfono")
-            );
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+    public ResponseEntity<LoginResponse> registerCustomer(@Valid @RequestBody RegisterCustomerRequest registerCustomerDto) {
+        User registeredUser = authService.registerCustomer(registerCustomerDto);
+        String jwtToken = jwtService.generateToken(registeredUser);
+        LoginResponse req = LoginResponse.fromEntity( registeredUser);
+        req.setToken(jwtToken);
+        req.setExpiresIn(jwtService.getExpirationTime());
+        return ResponseEntity.ok(req);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateCustomer(@Valid @RequestBody LoginRequest loginUserDto) {
-        try {
-            User authenticatedUser = authService.authenticate(loginUserDto);
-            String jwtToken = jwtService.generateToken(authenticatedUser);
-
-            return ResponseEntity.ok(new LoginResponse(
-                jwtToken, 
-                jwtService.getExpirationTime(),
-                authenticatedUser.getId(),
-                authenticatedUser.getName(),
-                authenticatedUser.getEmail()
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Credenciales inválidas"));
-        }
+    public ResponseEntity<LoginResponse> authenticateCustomer(@Valid @RequestBody LoginRequest loginUserDto) {
+        User authenticatedUser = authService.authenticate(loginUserDto);
+        String jwtToken = jwtService.generateToken(authenticatedUser);
+        LoginResponse req = LoginResponse.fromEntity( authenticatedUser);
+        req.setToken(jwtToken);
+        req.setExpiresIn(jwtService.getExpirationTime());
+        return ResponseEntity.ok(req) ;
     }
 
     @PostMapping("/register/business")
-    public ResponseEntity<?> registerBusiness(@Valid @RequestBody RegisterBusinessRequest registerRequest) {
-        try {
-            User registeredUser = authService.registerBusiness(registerRequest);
-            String jwtToken = jwtService.generateToken(registeredUser);
-            
-            return ResponseEntity.ok(new LoginResponse(
-                jwtToken, 
-                jwtService.getExpirationTime(),
-                registeredUser.getId(),
-                registeredUser.getName(),
-                registeredUser.getEmail()
-            ));
-        } catch (DataIntegrityViolationException e) {
-            return ResponseEntity.badRequest().body(
-                new ErrorResponse("Ya existe un usuario con este email o número de teléfono")
-            );
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+    public ResponseEntity<LoginResponse> registerBusiness(@Valid @RequestBody RegisterBusinessRequest registerRequest) {
+        User registeredUser = authService.registerBusiness(registerRequest);
+        String jwtToken = jwtService.generateToken(registeredUser);
+        LoginResponse req = LoginResponse.fromEntity( registeredUser);
+        req.setToken(jwtToken);
+        req.setExpiresIn(jwtService.getExpirationTime());
+        return ResponseEntity.ok(req);
     }
 
 
-    // Response classes
-    public static class LoginResponse {
-        private String token;
-        private long expiresIn;
-        private Long userId;
-        private String name;
-        private String email;
-
-        public LoginResponse(String token, long expiresIn, Long userId, String name, String email) {
-            this.token = token;
-            this.expiresIn = expiresIn;
-            this.userId = userId;
-            this.name = name;
-            this.email = email;
-        }
-
-        // Getters
-        public String getToken() { return token; }
-        public long getExpiresIn() { return expiresIn; }
-        public Long getUserId() { return userId; }
-        public String getName() { return name; }
-        public String getEmail() { return email; }
-    }
-
-    public static class ErrorResponse {
-        private String message;
-        private boolean success = false;
-
-        public ErrorResponse(String message) { this.message = message; }
-        public String getMessage() { return message; }
-        public boolean isSuccess() { return success; }
-    }
 }

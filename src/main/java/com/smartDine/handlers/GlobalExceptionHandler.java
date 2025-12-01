@@ -19,6 +19,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.smartDine.dto.ErrorDTO;
 import com.smartDine.dto.QueryParameterErrorDTO;
 import com.smartDine.dto.ValidationErrorDTO;
+import com.smartDine.exceptions.DuplicateUserException;
 import com.smartDine.exceptions.MissingQueryParamException;
 import com.smartDine.exceptions.RelatedEntityException;
 
@@ -171,5 +172,17 @@ public class GlobalExceptionHandler {
             List.of(ex.getParameterName())
         );
         return new ResponseEntity<>(errorDTO, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle duplicate user registration attempts
+     */
+    @ExceptionHandler(DuplicateUserException.class)
+    public ResponseEntity<ErrorDTO> handleDuplicateUserException(DuplicateUserException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.CONFLICT.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
     }
 }

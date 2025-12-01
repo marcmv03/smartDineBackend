@@ -2,6 +2,7 @@ package com.smartDine.controllers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
@@ -14,9 +15,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 
 import com.smartDine.dto.auth.LoginRequest;
+import com.smartDine.dto.auth.LoginResponse;
 import com.smartDine.dto.auth.RegisterBusinessRequest;
 import com.smartDine.dto.auth.RegisterCustomerRequest;
 import com.smartDine.entity.User;
+import com.smartDine.exceptions.DuplicateUserException;
 import com.smartDine.services.AuthenticationService;
 import com.smartDine.services.JwtService;
 
@@ -51,35 +54,32 @@ public class AuthenticationControllerIntegrationTest {
         when(jwtService.generateToken(any(User.class))).thenReturn("fake-jwt-token");
         when(jwtService.getExpirationTime()).thenReturn(3600L);
 
-        ResponseEntity<?> resp = controller.registerCustomer(req);
+        ResponseEntity<LoginResponse> resp = controller.registerCustomer(req);
         assertNotNull(resp);
-    assertEquals(200, resp.getStatusCode().value());
-    Object body = resp.getBody();
-    assertNotNull(body);
-    AuthenticationController.LoginResponse lr = (AuthenticationController.LoginResponse) body;
-    assertEquals("fake-jwt-token", lr.getToken());
-    assertEquals(3600L, lr.getExpiresIn());
-    assertEquals(42L, lr.getUserId());
+        assertEquals(200, resp.getStatusCode().value());
+        LoginResponse lr = resp.getBody();
+        assertNotNull(lr);
+        assertEquals("fake-jwt-token", lr.getToken());
+        assertEquals(3600L, lr.getExpiresIn());
+        assertEquals(42L, lr.getUserId());
+        assertEquals("IT Customer", lr.getName());
+        assertEquals("it.customer@test.com", lr.getEmail());
     }
 
     @Test
-    public void registerCustomer_conflict_shouldReturnBadRequest() {
+    public void registerCustomer_conflict_shouldThrowDuplicateUserException() {
         RegisterCustomerRequest req = new RegisterCustomerRequest();
         req.setName("IT Customer");
         req.setEmail("it.customer@test.com");
         req.setPassword("pass123");
         req.setPhoneNumber(100200300L);
 
-        doThrow(new DataIntegrityViolationException("duplicate")).when(authService).registerCustomer(any(RegisterCustomerRequest.class));
+        doThrow(new DuplicateUserException("Ya existe un usuario con este email o número de teléfono"))
+            .when(authService).registerCustomer(any(RegisterCustomerRequest.class));
 
-        ResponseEntity<?> resp = controller.registerCustomer(req);
-        assertNotNull(resp);
-    assertEquals(400, resp.getStatusCode().value());
-    Object body = resp.getBody();
-    assertNotNull(body);
-    AuthenticationController.ErrorResponse er = (AuthenticationController.ErrorResponse) body;
-    assertNotNull(er.getMessage());
-    assertEquals("Ya existe un usuario con este email o número de teléfono", er.getMessage());
+        assertThrows(DuplicateUserException.class, () -> {
+            controller.registerCustomer(req);
+        });
     }
 
     @Test
@@ -95,13 +95,13 @@ public class AuthenticationControllerIntegrationTest {
         when(jwtService.generateToken(any(User.class))).thenReturn("jwt-login-token");
         when(jwtService.getExpirationTime()).thenReturn(7200L);
 
-        ResponseEntity<?> resp = controller.authenticateCustomer(login);
+        ResponseEntity<LoginResponse> resp = controller.authenticateCustomer(login);
         assertNotNull(resp);
-    assertEquals(200, resp.getStatusCode().value());
-    Object body = resp.getBody();
-    assertNotNull(body);
-    AuthenticationController.LoginResponse lr = (AuthenticationController.LoginResponse) body;
-    assertEquals("jwt-login-token", lr.getToken());
+        assertEquals(200, resp.getStatusCode().value());
+        LoginResponse lr = resp.getBody();
+        assertNotNull(lr);
+        assertEquals("jwt-login-token", lr.getToken());
+        assertEquals(7200L, lr.getExpiresIn());
     }
 
     @Test
@@ -119,12 +119,13 @@ public class AuthenticationControllerIntegrationTest {
         when(jwtService.generateToken(any(User.class))).thenReturn("jwt-biz-token");
         when(jwtService.getExpirationTime()).thenReturn(7200L);
 
-        ResponseEntity<?> resp = controller.registerBusiness(req);
+        ResponseEntity<LoginResponse> resp = controller.registerBusiness(req);
         assertNotNull(resp);
-    assertEquals(200, resp.getStatusCode().value());
-    Object body = resp.getBody();
-    assertNotNull(body);
-    AuthenticationController.LoginResponse lr = (AuthenticationController.LoginResponse) body;
-    assertEquals("jwt-biz-token", lr.getToken());
+        assertEquals(200, resp.getStatusCode().value());
+        LoginResponse lr = resp.getBody();
+        assertNotNull(lr);
+        assertEquals("jwt-biz-token", lr.getToken());
+        assertEquals(7200L, lr.getExpiresIn());
+        assertEquals(44L, lr.getUserId());
     }
 }

@@ -2,6 +2,7 @@
 
 package com.smartDine.services;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -15,6 +16,7 @@ import com.smartDine.dto.auth.RegisterCustomerRequest;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.User;
+import com.smartDine.exceptions.DuplicateUserException;
 import com.smartDine.repository.BusinessRepository;
 import com.smartDine.repository.CustomerRepository;
 import com.smartDine.repository.UserRepository;
@@ -45,13 +47,17 @@ public class AuthenticationService {
      * Registers a new Customer user.
      */
     public Customer registerCustomer(RegisterCustomerRequest request) {
-        Customer user = new Customer();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setRole("customer");
-        return customerRepository.save(user);
+        try {
+            Customer user = new Customer();
+            user.setName(request.getName());
+            user.setEmail(request.getEmail());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setPhoneNumber(request.getPhoneNumber());
+            user.setRole("customer");
+            return customerRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            throw DuplicateUserException.fromDataIntegrityViolation(e);
+        }
     }
     
 
@@ -78,13 +84,17 @@ public class AuthenticationService {
      * Registers a new Business user.
      */
     public Business registerBusiness(RegisterBusinessRequest request) {
-        Business user = new Business();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setRole("business");
+        try {
+            Business user = new Business();
+            user.setName(request.getName());
+            user.setEmail(request.getEmail());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setPhoneNumber(request.getPhoneNumber());
+            user.setRole("business");
 
-        return businessRepository.save(user);
+            return businessRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            throw DuplicateUserException.fromDataIntegrityViolation(e);
+        }
     }
 }

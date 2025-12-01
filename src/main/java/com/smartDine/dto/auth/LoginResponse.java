@@ -1,30 +1,26 @@
 package com.smartDine.dto.auth;
-public class LoginResponse {
-    private String token;
+import com.smartDine.entity.Role;
+import com.smartDine.entity.User;
 
-    private long expiresIn;
+import lombok.Getter;
+import lombok.Setter;
 
-    public LoginResponse(String token, long expiresIn) {
-        this.token = token;
-        this.expiresIn = expiresIn;
-    }
-    public LoginResponse() {
-    }
-    public String getToken() {
-        return token;
-    }
+@Getter
+@Setter
+public  class LoginResponse {
+        private String token;
+        private long expiresIn;
+        private Long userId;
+        private String name;
+        private String email;
+        private Role role ;
 
-    public LoginResponse  setToken(String token) {
-        this.token = token;
-        return this ;
-    }
-
-    public long getExpiresIn() {
-        return expiresIn;
-    }
-
-    public LoginResponse setExpiresIn(long expiresIn) {
-        this.expiresIn = expiresIn;
-        return this ;
-    }
+      public static LoginResponse fromEntity( User user) {
+          LoginResponse dto = new LoginResponse();
+          dto.setUserId(user.getId());
+            dto.setName( user.getName());
+            dto.setEmail(user.getEmail());
+          dto.setRole(user.getRole());
+          return dto;
+}
 }
