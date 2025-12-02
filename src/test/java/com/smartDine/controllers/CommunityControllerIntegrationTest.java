@@ -2,6 +2,7 @@ package com.smartDine.controllers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -85,6 +86,16 @@ public class CommunityControllerIntegrationTest {
     }
 
     @Test
+    public void getCommunityById_shouldThrowExceptionWhenNotFound() {
+        when(communityService.getCommunityById(9999L))
+            .thenThrow(new IllegalArgumentException("Community not found with ID: 9999"));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            communityController.getCommunityById(9999L);
+        });
+    }
+
+    @Test
     public void createCommunity_shouldReturnCreated() {
         CreateCommunityDTO dto = new CreateCommunityDTO();
         dto.setName("New Community");
@@ -124,3 +135,4 @@ public class CommunityControllerIntegrationTest {
         assertEquals(MemberRole.PARTICIPANT.name(), resp.getBody().getMemberRole());
     }
 }
+

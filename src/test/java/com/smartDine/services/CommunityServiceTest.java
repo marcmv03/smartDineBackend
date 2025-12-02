@@ -148,6 +148,35 @@ public class CommunityServiceTest {
     }
 
     @Test
+    @DisplayName("Should get community by ID successfully")
+    void testGetCommunityById_Success() {
+        CreateCommunityDTO dto = new CreateCommunityDTO();
+        dto.setName("Test Community");
+        dto.setDescription("Description");
+        dto.setVisibility(true);
+        
+        Community created = communityService.createCommunity(dto, testBusiness);
+        
+        Community found = communityService.getCommunityById(created.getId());
+        
+        assertNotNull(found);
+        assertEquals(created.getId(), found.getId());
+        assertEquals("Test Community", found.getName());
+        assertEquals("Description", found.getDescription());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when community ID does not exist")
+    void testGetCommunityById_NotFound() {
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> communityService.getCommunityById(9999L)
+        );
+        
+        assertEquals("Community not found with ID: 9999", exception.getMessage());
+    }
+
+    @Test
     @DisplayName("Should upload community image by OWNER")
     void testUploadCommunityImage_Owner() throws IOException {
         CreateCommunityDTO dto = new CreateCommunityDTO();
