@@ -37,19 +37,19 @@ public class CommunityController {
     @Autowired
     private MemberService memberService;
 
-    @GetMapping("comunities")
+    @GetMapping("communities")
     public ResponseEntity<List<CommunityDTO>> getCommunities(@RequestParam(required = false) String search) {
         List<Community> communities = communityService.getCommunities(search);
         return ResponseEntity.ok(CommunityDTO.fromEntity(communities));
     }
 
-    @GetMapping("comunities/{id}")
+    @GetMapping("communities/{id}")
     public ResponseEntity<CommunityDTO> getCommunityById(@PathVariable Long id) {
         Community community = communityService.getCommunityById(id);
         return ResponseEntity.ok(CommunityDTO.fromEntity(community));
     }
 
-    @PostMapping("comunities")
+    @PostMapping("communities")
     public ResponseEntity<CommunityDTO> createCommunity(
             @Valid @RequestBody CreateCommunityDTO createDTO,
             @AuthenticationPrincipal User user) {
@@ -57,7 +57,7 @@ public class CommunityController {
         return ResponseEntity.ok(CommunityDTO.fromEntity(community));
     }
 
-    @PostMapping("comunities/{id}/members")
+    @PostMapping("communities/{id}/members")
     public ResponseEntity<MemberDTO> joinCommunity(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
@@ -65,7 +65,7 @@ public class CommunityController {
         return ResponseEntity.ok(MemberDTO.fromEntity(member));
     }
 
-    @PostMapping("comunities/{id}/image")
+    @PostMapping("communities/{id}/image")
     public ResponseEntity<UploadResponse> uploadCommunityImage(
             @PathVariable Long id,
             @RequestParam() MultipartFile file,
@@ -73,7 +73,7 @@ public class CommunityController {
         UploadResponse response = communityService.uploadCommunityImage(id, file, user);
         return ResponseEntity.ok(response);
     }
-    @GetMapping("me/comunities")
+    @GetMapping("me/communities")
     public ResponseEntity<List<CommunityDTO>> getMyCommunities(@AuthenticationPrincipal User user) {
         List<Community> communities = communityService.getCommunitiesForUser(user);
         return ResponseEntity.ok(CommunityDTO.fromEntity(communities));
