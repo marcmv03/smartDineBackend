@@ -1,27 +1,29 @@
 package com.smartDine.controllers;
 
+import java.io.IOException;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-
-import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.smartDine.dto.CommunityDTO;
 import com.smartDine.dto.CreateCommunityDTO;
 import com.smartDine.dto.MemberDTO;
+import com.smartDine.dto.UploadResponse;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Community;
 import com.smartDine.entity.Customer;
@@ -133,6 +135,36 @@ public class CommunityControllerIntegrationTest {
         assertNotNull(resp.getBody());
         assertEquals(500L, resp.getBody().getId());
         assertEquals(MemberRole.PARTICIPANT.name(), resp.getBody().getMemberRole());
+    }
+
+    @Test
+    public void uploadCommunityImage_shouldReturnUploadResponse() throws IOException {
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "test-image.jpg",
+            "image/jpeg",
+            "test image content".getBytes()
+        );
+
+        UploadResponse mockResponse = new UploadResponse(
+            "communities/100/images/test-uuid.jpg",
+            "https://smartdine-s3-bucket.s3.amazonaws.com/communities/100/images/test-uuid.jpg",
+            "image/jpeg",
+            file.getSize()
+        );
+
+        when(communityService.uploadCommunityImage(eq(100L), any(), eq(sampleOwner))).thenReturn(mockResponse);
+
+        ResponseEntity<UploadResponse> resp = communityController.uploadCommunityImage(100L, file, sampleOwner);
+
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertNotNull(resp.getBody().getKey());
+        assertNotNull(resp.getBody().getUrl());
+        assertNotNull(resp.getBody().getContentType());
+        assertNotNull(resp.getBody().getSize());
+        assertEquals("image/jpeg", resp.getBody().getContentType());
+        assertEquals(file.getSize(), resp.getBody().getSize());
     }
 }
 

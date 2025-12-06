@@ -84,7 +84,6 @@ public class CommunityService {
         if (savedCommunity.getMembers() == null) {
             savedCommunity.setMembers(new java.util.ArrayList<>());
         }
-        savedCommunity.getMembers().add(member);
         
         return savedCommunity;
     }
@@ -115,7 +114,7 @@ public class CommunityService {
 
         UploadResponse response = imageAdapter.uploadImage(file, keyName);
 
-        community.setImageUrl(keyName);
+        community.setImageUrl(response.getKey());
         communityRepository.save(community);
 
         return response;

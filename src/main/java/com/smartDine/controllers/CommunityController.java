@@ -65,7 +65,7 @@ public class CommunityController {
         return ResponseEntity.ok(MemberDTO.fromEntity(member));
     }
 
-    @PostMapping("communities/{id}/image")
+    @PostMapping("communities/{id}/images")
     public ResponseEntity<UploadResponse> uploadCommunityImage(
             @PathVariable Long id,
             @RequestParam() MultipartFile file,
