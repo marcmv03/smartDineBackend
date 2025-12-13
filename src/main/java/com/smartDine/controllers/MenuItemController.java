@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -21,8 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.smartDine.dto.MenuItemDTO;
+import com.smartDine.dto.UpdateDishDTO;
+import com.smartDine.dto.UpdateDrinkDTO;
 import com.smartDine.dto.UploadResponse;
 import com.smartDine.entity.Business;
+import com.smartDine.entity.Dish;
+import com.smartDine.entity.Drink;
 import com.smartDine.entity.MenuItem;
 import com.smartDine.entity.User;
 import com.smartDine.services.MenuItemService;
@@ -127,6 +132,62 @@ public class MenuItemController {
         menuItemService.deleteMenuItem(restaurantId, menuItemId, (Business) user);
         
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * PUT /smartdine/api/restaurants/{restaurantId}/dishes/{menuItemId} - Update a dish
+     */
+    @PutMapping("/restaurants/{restaurantId}/dishes/{menuItemId}")
+    public ResponseEntity<MenuItemDTO> updateDish(
+            @PathVariable Long restaurantId,
+            @PathVariable Long menuItemId,
+            @Valid @RequestBody UpdateDishDTO updateDishDTO,
+            @AuthenticationPrincipal User user) {
+        
+        // Validate user is not null
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        // Validate user is BUSINESS
+        if (!(user instanceof Business)) {
+            throw new org.springframework.security.authentication.BadCredentialsException(
+                "Only business owners can update dishes");
+        }
+        
+        // Update the dish
+        Dish updatedDish = menuItemService.updateDish(restaurantId, menuItemId, updateDishDTO, (Business) user);
+        MenuItemDTO dishDTO = MenuItemDTO.fromEntity(updatedDish);
+        
+        return ResponseEntity.ok(dishDTO);
+    }
+
+    /**
+     * PUT /smartdine/api/restaurants/{restaurantId}/drinks/{menuItemId} - Update a drink
+     */
+    @PutMapping("/restaurants/{restaurantId}/drinks/{menuItemId}")
+    public ResponseEntity<MenuItemDTO> updateDrink(
+            @PathVariable Long restaurantId,
+            @PathVariable Long menuItemId,
+            @Valid @RequestBody UpdateDrinkDTO updateDrinkDTO,
+            @AuthenticationPrincipal User user) {
+        
+        // Validate user is not null
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        // Validate user is BUSINESS
+        if (!(user instanceof Business)) {
+            throw new org.springframework.security.authentication.BadCredentialsException(
+                "Only business owners can update drinks");
+        }
+        
+        // Update the drink
+        Drink updatedDrink = menuItemService.updateDrink(restaurantId, menuItemId, updateDrinkDTO, (Business) user);
+        MenuItemDTO drinkDTO = MenuItemDTO.fromEntity(updatedDrink);
+        
+        return ResponseEntity.ok(drinkDTO);
     }
 
 }

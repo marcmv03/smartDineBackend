@@ -21,6 +21,7 @@ import com.smartDine.dto.QueryParameterErrorDTO;
 import com.smartDine.dto.ValidationErrorDTO;
 import com.smartDine.exceptions.DuplicateUserException;
 import com.smartDine.exceptions.MissingQueryParamException;
+import com.smartDine.exceptions.NoUserIsMemberException;
 import com.smartDine.exceptions.RelatedEntityException;
 
 import io.jsonwebtoken.ExpiredJwtException; 
@@ -179,6 +180,18 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(DuplicateUserException.class)
     public ResponseEntity<ErrorDTO> handleDuplicateUserException(DuplicateUserException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.CONFLICT.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Handle user not being a member or lacking permissions
+     */
+    @ExceptionHandler(NoUserIsMemberException.class)
+    public ResponseEntity<ErrorDTO> handleNoUserIsMemberException(NoUserIsMemberException ex) {
         ErrorDTO errorDTO = new ErrorDTO(
             HttpStatus.CONFLICT.value(),
             ex.getMessage()
