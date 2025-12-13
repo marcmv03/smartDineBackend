@@ -13,6 +13,8 @@ import com.smartDine.adapters.ImageAdapter;
 import com.smartDine.dto.DishDTO;
 import com.smartDine.dto.DrinkDTO;
 import com.smartDine.dto.MenuItemDTO;
+import com.smartDine.dto.UpdateDishDTO;
+import com.smartDine.dto.UpdateDrinkDTO;
 import com.smartDine.dto.UploadResponse;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Dish;
@@ -75,8 +77,9 @@ public class MenuItemService {
         return dishRepository.save(dish);
     }
     public MenuItem getMenuItemById(Long menuItemId) {
-        return menuItemRepository.findById(menuItemId).get() ;
-}
+        return menuItemRepository.findById(menuItemId)
+            .orElseThrow(() -> new IllegalArgumentException("Menu item not found with ID: " + menuItemId));
+    }
 public void addImage(Long menuItemId, String imageUrl) {
     MenuItem menuItem = menuItemRepository.findById(menuItemId)
         .orElseThrow(() -> new IllegalArgumentException("Menu item not found with ID: " + menuItemId));
@@ -159,6 +162,105 @@ public void addImage(Long menuItemId, String imageUrl) {
         menuItemRepository.delete(menuItem);
         menuItemRepository.flush() ; 
         imageAdapter.deleteImage(menuItem.getImageUrl());
+    }
+
+    /**
+     * Updates a Dish with new name, description, courseType, and elements.
+     * Validates restaurant ownership and name uniqueness.
+     * 
+     * @param restaurantId the ID of the restaurant
+     * @param menuItemId the ID of the dish to update
+     * @param updateDishDTO the update data
+     * @param business the business owner
+     * @return updated Dish entity
+     * @throws IllegalArgumentException if validation fails
+     */
+    @Transactional
+    public Dish updateDish(Long restaurantId, Long menuItemId, UpdateDishDTO updateDishDTO, Business business) {
+        // Validate restaurant ownership
+        if (!restaurantService.isOwnerOfRestaurant(restaurantId, business)) {
+            throw new IllegalArgumentException("You do not own this restaurant");
+        }
+        
+        // Validate menu item exists and is a Dish
+        MenuItem menuItem = menuItemRepository.findById(menuItemId)
+            .orElseThrow(() -> new IllegalArgumentException("Menu item not found with ID: " + menuItemId));
+        
+        if (!(menuItem instanceof Dish)) {
+            throw new IllegalArgumentException("Menu item with ID " + menuItemId + " is not a dish");
+        }
+        
+        Dish dish = (Dish) menuItem;
+        
+        // Validate menu item belongs to the restaurant
+        if (!dish.getRestaurant().getId().equals(restaurantId)) {
+            throw new IllegalArgumentException("Menu item does not belong to this restaurant");
+        }
+        
+        // Check if name is being changed and if new name already exists
+        if (!dish.getName().equals(updateDishDTO.getName())) {
+            Optional<Dish> existingDish = dishRepository.findByNameAndRestaurantId(updateDishDTO.getName(), restaurantId);
+            if (existingDish.isPresent() && !existingDish.get().getId().equals(menuItemId)) {
+                throw new IllegalArgumentException("A dish with name '" + updateDishDTO.getName() + "' already exists in this restaurant");
+            }
+        }
+        
+        // Update dish fields
+        dish.setName(updateDishDTO.getName());
+        dish.setDescription(updateDishDTO.getDescription());
+        dish.setCourseType(updateDishDTO.getCourseType());
+        dish.setElements(updateDishDTO.getElements());
+        
+        return dishRepository.save(dish);
+    }
+
+    /**
+     * Updates a Drink with new name, description, and drinkType.
+     * Validates restaurant ownership and name uniqueness.
+     * 
+     * @param restaurantId the ID of the restaurant
+     * @param menuItemId the ID of the drink to update
+     * @param updateDrinkDTO the update data
+     * @param business the business owner
+     * @return updated Drink entity
+     * @throws IllegalArgumentException if validation fails
+     */
+    @Transactional
+    public Drink updateDrink(Long restaurantId, Long menuItemId, UpdateDrinkDTO updateDrinkDTO, Business business) {
+        // Validate restaurant ownership
+        if (!restaurantService.isOwnerOfRestaurant(restaurantId, business)) {
+            throw new IllegalArgumentException("You do not own this restaurant");
+        }
+        
+        // Validate menu item exists and is a Drink
+        MenuItem menuItem = menuItemRepository.findById(menuItemId)
+            .orElseThrow(() -> new IllegalArgumentException("Menu item not found with ID: " + menuItemId));
+        
+        if (!(menuItem instanceof Drink)) {
+            throw new IllegalArgumentException("Menu item with ID " + menuItemId + " is not a drink");
+        }
+        
+        Drink drink = (Drink) menuItem;
+        
+        // Validate menu item belongs to the restaurant
+        if (!drink.getRestaurant().getId().equals(restaurantId)) {
+            throw new IllegalArgumentException("Menu item does not belong to this restaurant");
+        }
+        
+        // Check if name is being changed and if new name already exists
+        if (!drink.getName().equals(updateDrinkDTO.getName())) {
+            Optional<Drink> existingDrink = drinkRepository.findByNameAndRestaurantId(updateDrinkDTO.getName(), restaurantId);
+            if (existingDrink.isPresent() && !existingDrink.get().getId().equals(menuItemId)) {
+                throw new IllegalArgumentException("A drink with name '" + updateDrinkDTO.getName() + "' already exists in this restaurant");
+            }
+        }
+        
+        // Update drink fields
+        drink.setName(updateDrinkDTO.getName());
+        drink.setDescription(updateDrinkDTO.getDescription());
+        drink.setDrinkType(updateDrinkDTO.getDrinkType());
+        
+        return drinkRepository.save(drink);
     }
 
 }
