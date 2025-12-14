@@ -27,7 +27,38 @@ tags:
     description: Retrieve the authenticated user profile.
   - name: Images
     description: Upload and retrieve images for restaurants and menu items.
+  - name: Communities
+    description: Manage communities and members.
 paths:
+  /smartdine/api/communities/{id}/members:
+    get:
+      tags:
+        - Communities
+      summary: Get members of a community
+      operationId: getCommunityMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the community
+      responses:
+        '200':
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+        '403':
+          description: Forbidden - User is not a member of the private community
+        '404':
+          description: Community not found
   /smartdine/api/auth/register/customer:
     post:
       tags:
@@ -1182,8 +1213,29 @@ components:
         customerId:
           type: integer
           format: int64
-        numCustomers:
-          type: integer
         date:
           type: string
           format: date
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        userName:
+          type: string
+        communityId:
+          type: integer
+          format: int64
+        memberRole:
+          type: string
+          enum:
+            - OWNER
+            - ADMIN
+            - PARTICIPANT
+        joinedAt:
+          type: string
+          format: date-time

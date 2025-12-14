@@ -60,7 +60,7 @@ public class CommunityService {
         community.setName(createDTO.getName());
         community.setDescription(createDTO.getDescription());
         community.setVisibility(createDTO.isVisibility());
-        
+
         // Determine community type
         if (user instanceof Business) {
             community.setCommunityType(CommunityType.RESTAURANT);
@@ -79,23 +79,23 @@ public class CommunityService {
         member.setCommunity(savedCommunity);
         member.setMemberRole(MemberRole.OWNER);
         memberRepository.save(member);
-        
+
         // Add member to the list so it's available in the returned object
         if (savedCommunity.getMembers() == null) {
             savedCommunity.setMembers(new java.util.ArrayList<>());
         }
-        
+
         return savedCommunity;
     }
 
     @Transactional
     public UploadResponse uploadCommunityImage(Long communityId, MultipartFile file, User user) throws IOException {
         Community community = getCommunityById(communityId);
-        
+
         // Check if user is OWNER or ADMIN
         Member member = memberRepository.findByUserAndCommunity(user, community)
                 .orElseThrow(() -> new IllegalArgumentException("User is not a member of this community"));
-        
+
         if (member.getMemberRole() != MemberRole.OWNER && member.getMemberRole() != MemberRole.ADMIN) {
             throw new IllegalArgumentException("Only OWNER or ADMIN can upload community image");
         }
@@ -119,11 +119,27 @@ public class CommunityService {
 
         return response;
     }
+
     @Transactional(readOnly = true)
     public List<Community> getCommunitiesForUser(User user) {
         List<Member> memberships = memberRepository.findByUser(user);
         return memberships.stream()
                 .map(Member::getCommunity)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Member> getCommunityMembers(Long communityId, User requestingUser) {
+        Community community = getCommunityById(communityId);
+
+        if (!community.isVisibility()) {
+            // Private community: check if user is a member
+            boolean isMember = memberRepository.findByUserAndCommunity(requestingUser, community).isPresent();
+            if (!isMember) {
+                throw new IllegalArgumentException("You must be a member to view members of a private community");
+            }
+        }
+
+        return memberRepository.findByCommunity(community);
     }
 }

@@ -65,6 +65,14 @@ public class CommunityController {
         return ResponseEntity.ok(MemberDTO.fromEntity(member));
     }
 
+    @GetMapping("communities/{id}/members")
+    public ResponseEntity<List<MemberDTO>> getCommunityMembers(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        List<Member> members = communityService.getCommunityMembers(id, user);
+        return ResponseEntity.ok(MemberDTO.fromEntity(members));
+    }
+
     @PostMapping("communities/{id}/images")
     public ResponseEntity<UploadResponse> uploadCommunityImage(
             @PathVariable Long id,
@@ -73,9 +81,10 @@ public class CommunityController {
         UploadResponse response = communityService.uploadCommunityImage(id, file, user);
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("me/communities")
     public ResponseEntity<List<CommunityDTO>> getMyCommunities(@AuthenticationPrincipal User user) {
         List<Community> communities = communityService.getCommunitiesForUser(user);
         return ResponseEntity.ok(CommunityDTO.fromEntity(communities));
-}
+    }
 }

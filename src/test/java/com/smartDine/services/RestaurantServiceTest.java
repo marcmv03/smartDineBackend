@@ -39,7 +39,7 @@ import jakarta.transaction.Transactional;
 public class RestaurantServiceTest {
     @Autowired
     private RestaurantService restaurantService;
-    @Autowired 
+    @Autowired
     private RestaurantRepository restaurantRepository;
     @Autowired
     private BusinessService businessService;
@@ -47,19 +47,19 @@ public class RestaurantServiceTest {
     private BusinessRepository businessRepository;
     @Autowired
     private DishRepository dishRepository;
-    
+
     @MockBean
     private ImageAdapter imageAdapter;
-    
+
     private Business testOwner;
     private Restaurant testRestaurant;
-    
+
     @BeforeEach
     void setUp() {
         // Create a test owner
         testOwner = new Business("Test Owner", "testowner@example.com", "password", 666666666L);
         testOwner = businessRepository.save(testOwner);
-        
+
         // Create a test restaurant
         RestaurantDTO restaurantDTO = new RestaurantDTO();
         restaurantDTO.setName("Test Restaurant for Upload");
@@ -67,6 +67,7 @@ public class RestaurantServiceTest {
         restaurantDTO.setDescription("Restaurant for upload tests");
         testRestaurant = restaurantService.createRestaurant(testOwner, restaurantDTO);
     }
+
     @Test
     @DisplayName("Context loads and RestaurantService is not null")
     void contextLoads() {
@@ -83,7 +84,8 @@ public class RestaurantServiceTest {
         restaurantDTO.setAddress("123 Test St");
         restaurantDTO.setDescription("A test restaurant");
         Restaurant createdRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
-         // Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        // Restaurant createdRestaurant =
+        // businessService.createRestaurantForBusiness(owner, restaurantDTO);
         assertNotNull(createdRestaurant);
         assertNotNull(createdRestaurant.getId());
         assertEquals("Test Restaurant", createdRestaurant.getName());
@@ -133,6 +135,7 @@ public class RestaurantServiceTest {
             restaurantService.getRestaurantById(9999L); // Assuming this ID does not exist
         });
     }
+
     @Test
     @DisplayName("Should fetch restaurant by name successfully")
     void testGetRestaurantByNameFound() {
@@ -143,13 +146,15 @@ public class RestaurantServiceTest {
         restaurantDTO.setAddress("101 Unique St");
         restaurantDTO.setDescription("A unique name test restaurant");
         Restaurant createdRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
-         // Restaurant createdRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        // Restaurant createdRestaurant =
+        // businessService.createRestaurantForBusiness(owner, restaurantDTO);
         Restaurant fetchedRestaurant = restaurantService.getRestaurantById(createdRestaurant.getId());
         assertNotNull(fetchedRestaurant);
         assertEquals(createdRestaurant.getId(), fetchedRestaurant.getId());
         assertEquals("Unique Name Restaurant", fetchedRestaurant.getName());
         assertEquals(owner.getId(), fetchedRestaurant.getOwner().getId());
     }
+
     @Test
     @DisplayName("Should delete existing restaurant successfully")
     void deleteExistingRestaurant_shouldRemoveRestaurant() {
@@ -160,13 +165,15 @@ public class RestaurantServiceTest {
         restaurantDTO.setAddress("321 Delete St");
         restaurantDTO.setDescription("A restaurant to be deleted");
         Restaurant savedRestaurant = restaurantService.createRestaurant(restaurantDTO, owner);
-         // Restaurant savedRestaurant = businessService.createRestaurantForBusiness(owner, restaurantDTO);
+        // Restaurant savedRestaurant =
+        // businessService.createRestaurantForBusiness(owner, restaurantDTO);
         Long restaurantId = savedRestaurant.getId();
         restaurantService.deleteRestaurant(restaurantId);
         assertThrows(IllegalArgumentException.class, () -> {
             restaurantService.getRestaurantById(restaurantId);
         });
     }
+
     @Test
     @DisplayName("Should throw exception when deleting non-existing restaurant")
     void deleteNonExistingRestaurant_shouldThrowException() {
@@ -175,6 +182,7 @@ public class RestaurantServiceTest {
             restaurantService.deleteRestaurant(9999L); // Assuming this ID does not exist
         });
     }
+
     @Test
     void updateExistingRestaurant_shouldModifyDetails() {
         Business owner = new Business("Test Owner", "testowner6@test.com", "password", 999888777L);
@@ -197,6 +205,7 @@ public class RestaurantServiceTest {
         assertEquals("Updated description", updatedRestaurant.getDescription());
         assertEquals(owner.getId(), updatedRestaurant.getOwner().getId());
     }
+
     @Test
     @DisplayName("Should throw exception when updating non-existing restaurant")
     void updateNonExistingRestaurant_shouldThrowException() {
@@ -211,20 +220,21 @@ public class RestaurantServiceTest {
             restaurantService.updateRestaurant(9999L, updatedDTO); // Assuming this ID does not exist
         });
     }
+
     @Test
     @DisplayName("Should return menu items when restaurant has menu items")
     void testGetMenuItems_WithItems() {
         // Create owner and restaurant
         Business owner = new Business("Test Owner", "testowner7@test.com", "password", 777777777L);
         owner = businessRepository.save(owner);
-        
+
         RestaurantDTO restaurantDTO = new RestaurantDTO();
         restaurantDTO.setName("Menu Test Restaurant");
         restaurantDTO.setAddress("456 Menu St");
         restaurantDTO.setDescription("A restaurant to test menu functionality");
-        
+
         Restaurant createdRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
-        
+
         // Create and add a menu item
         Dish menuItem = new Dish();
         menuItem.setName("Test Burger");
@@ -232,10 +242,10 @@ public class RestaurantServiceTest {
         menuItem.setPrice(12.99);
         dishRepository.save(menuItem); // Save the dish to ensure it has an ID
         restaurantService.addMenuItem(createdRestaurant.getId(), menuItem);
-        
+
         // Get menu items
         List<MenuItem> menuItems = restaurantService.getMenuItems(createdRestaurant.getId());
-        
+
         // Verify results
         assertNotNull(menuItems);
         assertEquals(1, menuItems.size());
@@ -251,53 +261,53 @@ public class RestaurantServiceTest {
         // Create owner and restaurant
         Business owner = new Business("Test Owner", "testowner8@test.com", "password", 888888888L);
         owner = businessRepository.save(owner);
-        
+
         RestaurantDTO restaurantDTO = new RestaurantDTO();
         restaurantDTO.setName("Empty Menu Restaurant");
         restaurantDTO.setAddress("789 Empty St");
         restaurantDTO.setDescription("A restaurant with no menu items");
-        
+
         Restaurant createdRestaurant = restaurantService.createRestaurant(owner, restaurantDTO);
-        
+
         // Get menu items (should be empty)
         List<MenuItem> menuItems = restaurantService.getMenuItems(createdRestaurant.getId());
-        
-        // Verify results
-        assertNull(menuItems);
+
+        // Verify results - menu should be empty but not null
+        assertNotNull(menuItems);
+        assertTrue(menuItems.isEmpty());
     }
-    
+
     @Test
     @DisplayName("Should upload image successfully when owner is valid")
     void testUploadRestaurantImage_Success() throws IOException {
         // Create test data
         Business testOwner = new Business("Upload Owner", "uploadowner@example.com", "password", 999999999L);
         testOwner = businessRepository.save(testOwner);
-        
+
         RestaurantDTO restaurantDTO = new RestaurantDTO();
         restaurantDTO.setName("Upload Test Restaurant");
         restaurantDTO.setAddress("123 Upload St");
         restaurantDTO.setDescription("Restaurant for upload tests");
         Restaurant testRestaurant = restaurantService.createRestaurant(testOwner, restaurantDTO);
-        
+
         // Given
         MockMultipartFile file = new MockMultipartFile(
-            "file",
-            "test-image.jpg",
-            "image/jpeg",
-            "test image content".getBytes()
-        );
-        
+                "file",
+                "test-image.jpg",
+                "image/jpeg",
+                "test image content".getBytes());
+
         String expectedKeyPattern = "restaurants/" + testRestaurant.getId() + "/images/";
         String mockKey = expectedKeyPattern + "test-uuid.jpg";
         String mockUrl = "https://smartdine-s3-bucket.s3.amazonaws.com/" + mockKey;
         UploadResponse mockResponse = new UploadResponse(mockKey, mockUrl, "image/jpeg", file.getSize());
-        
+
         // Mock the adapter response
         when(imageAdapter.uploadImage(any(), any())).thenReturn(mockResponse);
-        
+
         // When
         UploadResponse response = restaurantService.uploadRestaurantImage(testRestaurant.getId(), file, testOwner);
-        
+
         // Then
         assertNotNull(response);
         assertNotNull(response.getKey());
@@ -306,97 +316,91 @@ public class RestaurantServiceTest {
         assertNotNull(response.getUrl());
         assertEquals("image/jpeg", response.getContentType());
         assertEquals(file.getSize(), response.getSize());
-        
+
         // Verify restaurant entity was updated
         Restaurant updatedRestaurant = restaurantService.getRestaurantById(testRestaurant.getId());
         assertNotNull(updatedRestaurant.getImageUrl());
         assertTrue(updatedRestaurant.getImageUrl().startsWith(expectedKeyPattern));
     }
-    
+
     @Test
     @DisplayName("Should throw exception when uploading image for non-existent restaurant")
     void testUploadRestaurantImage_RestaurantNotFound() {
         // Create test owner
         Business testOwnerTemp = new Business("Test Owner", "testowner@example.com", "password", 222222222L);
         final Business testOwner = businessRepository.save(testOwnerTemp);
-        
+
         // Given
         MockMultipartFile file = new MockMultipartFile(
-            "file",
-            "test-image.jpg",
-            "image/jpeg",
-            "test image content".getBytes()
-        );
-        
+                "file",
+                "test-image.jpg",
+                "image/jpeg",
+                "test image content".getBytes());
+
         // When/Then
         IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> restaurantService.uploadRestaurantImage(9999L, file, testOwner)
-        );
-        
+                IllegalArgumentException.class,
+                () -> restaurantService.uploadRestaurantImage(9999L, file, testOwner));
+
         assertEquals("Restaurant not found with  ID: 9999", exception.getMessage());
     }
-    
+
     @Test
     @DisplayName("Should throw exception when user is not the owner")
     void testUploadRestaurantImage_NotOwner() {
         // Create restaurant and owner
         Business owner = new Business("Original Owner", "owner@example.com", "password", 333333333L);
         owner = businessRepository.save(owner);
-        
+
         RestaurantDTO restaurantDTO = new RestaurantDTO();
         restaurantDTO.setName("Owned Restaurant");
         restaurantDTO.setAddress("123 Owner St");
         restaurantDTO.setDescription("Restaurant with specific owner");
         Restaurant restaurant = restaurantService.createRestaurant(owner, restaurantDTO);
-        
+
         // Given
         Business otherOwnerTemp = new Business("Other Owner", "other@example.com", "password", 444444444L);
         final Business otherOwner = businessRepository.save(otherOwnerTemp);
-        
+
         MockMultipartFile file = new MockMultipartFile(
-            "file",
-            "test-image.jpg",
-            "image/jpeg",
-            "test image content".getBytes()
-        );
-        
+                "file",
+                "test-image.jpg",
+                "image/jpeg",
+                "test image content".getBytes());
+
         // When/Then
         IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> restaurantService.uploadRestaurantImage(restaurant.getId(), file, otherOwner)
-        );
-        
+                IllegalArgumentException.class,
+                () -> restaurantService.uploadRestaurantImage(restaurant.getId(), file, otherOwner));
+
         assertEquals("You do not own this restaurant", exception.getMessage());
     }
-    
+
     @Test
     @DisplayName("Should throw exception when file is empty")
     void testUploadRestaurantImage_EmptyFile() {
         // Create restaurant and owner
         Business ownerTemp = new Business("File Test Owner", "fileowner@example.com", "password", 555555555L);
         final Business owner = businessRepository.save(ownerTemp);
-        
+
         RestaurantDTO restaurantDTO = new RestaurantDTO();
         restaurantDTO.setName("File Test Restaurant");
         restaurantDTO.setAddress("123 File St");
         restaurantDTO.setDescription("Restaurant for file tests");
         final Restaurant restaurant = restaurantService.createRestaurant(owner, restaurantDTO);
-        
+
         // Given
         MockMultipartFile emptyFile = new MockMultipartFile(
-            "file",
-            "empty.jpg",
-            "image/jpeg",
-            new byte[0]
-        );
-        
+                "file",
+                "empty.jpg",
+                "image/jpeg",
+                new byte[0]);
+
         // When/Then
         IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> restaurantService.uploadRestaurantImage(restaurant.getId(), emptyFile, owner)
-        );
-        
+                IllegalArgumentException.class,
+                () -> restaurantService.uploadRestaurantImage(restaurant.getId(), emptyFile, owner));
+
         assertEquals("File cannot be null or empty", exception.getMessage());
     }
 }

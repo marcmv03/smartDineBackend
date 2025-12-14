@@ -90,7 +90,7 @@ public class CommunityControllerIntegrationTest {
     @Test
     public void getCommunityById_shouldThrowExceptionWhenNotFound() {
         when(communityService.getCommunityById(9999L))
-            .thenThrow(new IllegalArgumentException("Community not found with ID: 9999"));
+                .thenThrow(new IllegalArgumentException("Community not found with ID: 9999"));
 
         assertThrows(IllegalArgumentException.class, () -> {
             communityController.getCommunityById(9999L);
@@ -140,18 +140,16 @@ public class CommunityControllerIntegrationTest {
     @Test
     public void uploadCommunityImage_shouldReturnUploadResponse() throws IOException {
         MockMultipartFile file = new MockMultipartFile(
-            "file",
-            "test-image.jpg",
-            "image/jpeg",
-            "test image content".getBytes()
-        );
+                "file",
+                "test-image.jpg",
+                "image/jpeg",
+                "test image content".getBytes());
 
         UploadResponse mockResponse = new UploadResponse(
-            "communities/100/images/test-uuid.jpg",
-            "https://smartdine-s3-bucket.s3.amazonaws.com/communities/100/images/test-uuid.jpg",
-            "image/jpeg",
-            file.getSize()
-        );
+                "communities/100/images/test-uuid.jpg",
+                "https://smartdine-s3-bucket.s3.amazonaws.com/communities/100/images/test-uuid.jpg",
+                "image/jpeg",
+                file.getSize());
 
         when(communityService.uploadCommunityImage(eq(100L), any(), eq(sampleOwner))).thenReturn(mockResponse);
 
@@ -166,5 +164,22 @@ public class CommunityControllerIntegrationTest {
         assertEquals("image/jpeg", resp.getBody().getContentType());
         assertEquals(file.getSize(), resp.getBody().getSize());
     }
-}
 
+    @Test
+    public void getCommunityMembers_shouldReturnMembers() {
+        Member member = new Member();
+        member.setId(500L);
+        member.setUser(sampleUser);
+        member.setCommunity(sampleCommunity);
+        member.setMemberRole(MemberRole.PARTICIPANT);
+
+        when(communityService.getCommunityMembers(100L, sampleUser)).thenReturn(List.of(member));
+
+        ResponseEntity<List<MemberDTO>> resp = communityController.getCommunityMembers(100L, sampleUser);
+
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals(1, resp.getBody().size());
+        assertEquals(500L, resp.getBody().get(0).getId());
+    }
+}
