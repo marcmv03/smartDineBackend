@@ -3,7 +3,6 @@ package com.smartDine.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,9 +17,9 @@ import com.smartDine.entity.Community;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Member;
 import com.smartDine.entity.MemberRole;
+import com.smartDine.exceptions.NoUserIsMemberException;
 import com.smartDine.repository.BusinessRepository;
 import com.smartDine.repository.CustomerRepository;
-import com.smartDine.repository.MemberRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -39,11 +38,10 @@ public class MemberServiceTest {
     @Autowired
     private CustomerRepository customerRepository;
 
-    @Autowired
-    private MemberRepository memberRepository;
 
     private Business owner;
     private Customer user;
+    private Customer anotherUser;
     private Community publicCommunity;
     private Community privateCommunity;
 
@@ -54,6 +52,9 @@ public class MemberServiceTest {
 
         user = new Customer("User", "user@test.com", "password", 222222222L);
         user = customerRepository.save(user);
+
+        anotherUser = new Customer("Another User", "another@test.com", "password", 333333333L);
+        anotherUser = customerRepository.save(anotherUser);
 
         CreateCommunityDTO publicDto = new CreateCommunityDTO();
         publicDto.setName("Public Community");
@@ -96,114 +97,95 @@ public class MemberServiceTest {
     @Test
     @DisplayName("Should fail to join if owner tries to join again")
     void testOwnerJoinAgain() {
-        assertThrows(IllegalArgumentException.class, () -> memberService.joinCommunity(publicCommunity.getId(), owner));
+        assertThrows(IllegalArgumentException.class, () -> 
+            memberService.joinCommunity(publicCommunity.getId(), owner));
     }
 
-    // ==================== DELETE MEMBER TESTS ====================
+    // Tests for getMemberById
+    @Test
+    @DisplayName("Should get member by ID successfully")
+    void testGetMemberById() {
+        Member member = memberService.joinCommunity(publicCommunity.getId(), user);
+        
+        Member retrievedMember = memberService.getMemberById(member.getId());
+        
+        assertNotNull(retrievedMember);
+        assertEquals(member.getId(), retrievedMember.getId());
+        assertEquals(user.getId(), retrievedMember.getUser().getId());
+        assertEquals(publicCommunity.getId(), retrievedMember.getCommunity().getId());
+    }
+
+    @Test
+    @DisplayName("Should fail to get member with non-existent ID")
+    void testGetMemberByIdNotFound() {
+        assertThrows(IllegalArgumentException.class, () -> 
+            memberService.getMemberById(99999L));
+    }
+
+    // Tests for deleteMember
+    @Test
+    @DisplayName("Should delete member when user is community owner")
+    void testDeleteMemberAsOwner() {
+        // User joins the community
+        Member member = memberService.joinCommunity(publicCommunity.getId(), user);
+        Long memberId = member.getId();
+        
+        // Owner deletes the member
+        memberService.deleteMember(memberId, owner);
+        
+        // Verify member is deleted
+        assertThrows(IllegalArgumentException.class, () -> 
+            memberService.getMemberById(memberId));
+    }
+
+    @Test
+    @DisplayName("Should delete member when user deletes themselves")
+    void testDeleteMemberSelf() {
+        // User joins the community
+        Member member = memberService.joinCommunity(publicCommunity.getId(), user);
+        Long memberId = member.getId();
+        
+        // User deletes themselves
+        memberService.deleteMember(memberId, user);
+        
+        // Verify member is deleted
+        assertThrows(IllegalArgumentException.class, () -> 
+            memberService.getMemberById(memberId));
+    }
+
+    @Test
+    @DisplayName("Should fail to delete member when user is not owner and not self")
+    void testDeleteMemberUnauthorized() {
+        // User joins the community
+        Member member = memberService.joinCommunity(publicCommunity.getId(), user);
+        Long memberId = member.getId();
+        
+        // Another user (not owner, not self) tries to delete
+        assertThrows(NoUserIsMemberException.class, () -> 
+            memberService.deleteMember(memberId, anotherUser));
+    }
+
+    @Test
+    @DisplayName("Should fail to delete non-existent member")
+    void testDeleteMemberNotFound() {
+        assertThrows(IllegalArgumentException.class, () -> 
+            memberService.deleteMember(99999L, owner));
+    }
 
     @Test
     @DisplayName("Should allow participant to delete themselves")
-    void deleteMember_ParticipantDeletesSelf_Success() {
-        // User joins and becomes PARTICIPANT
+    void testDeleteSelfAsParticipant() {
+        // User joins as participant
         Member member = memberService.joinCommunity(publicCommunity.getId(), user);
-
-        // Self-delete
-        memberService.deleteMember(member.getId(), user);
-
-        // Verify deleted - should throw when joining again (would fail if still member)
-        Member newMember = memberService.joinCommunity(publicCommunity.getId(), user);
-        assertNotNull(newMember);
-    }
-
-    @Test
-    @DisplayName("Should fail when participant tries to delete another member")
-    void deleteMember_ParticipantDeletesOther_Fails() {
-        // Two users join
-        Member member1 = memberService.joinCommunity(publicCommunity.getId(), user);
-
-        Customer user2 = new Customer("User2", "user2@test.com", "password", 333333333L);
-        user2 = customerRepository.save(user2);
-        Member member2 = memberService.joinCommunity(publicCommunity.getId(), user2);
-
-        // User1 tries to delete user2
-        assertThrows(IllegalArgumentException.class,
-                () -> memberService.deleteMember(member2.getId(), user));
-    }
-
-    @Test
-    @DisplayName("Should allow owner to delete participant")
-    void deleteMember_OwnerDeletesParticipant_Success() {
-        // User joins
-        Member member = memberService.joinCommunity(publicCommunity.getId(), user);
-
-        // Owner deletes participant
-        memberService.deleteMember(member.getId(), owner);
-
-        // Verify deleted - user can join again
-        Member newMember = memberService.joinCommunity(publicCommunity.getId(), user);
-        assertNotNull(newMember);
-    }
-
-    @Test
-    @DisplayName("Should fail when trying to delete the owner")
-    void deleteMember_DeleteOwner_Fails() {
-        // Find the owner member using repository
-        Member ownerMember = memberRepository.findByUserAndCommunity(owner, publicCommunity)
-                .orElseThrow();
-
-        // Try to delete owner - should fail
-        assertThrows(IllegalArgumentException.class,
-                () -> memberService.deleteMember(ownerMember.getId(), owner));
-    }
-
-    @Test
-    @DisplayName("Should fail when owner tries to delete themselves")
-    void deleteMember_OwnerDeletesSelf_Fails() {
-        // Find owner's member record using repository
-        Member ownerMember = memberRepository.findByUserAndCommunity(owner, publicCommunity)
-                .orElseThrow();
-
-        assertThrows(IllegalArgumentException.class,
-                () -> memberService.deleteMember(ownerMember.getId(), owner));
-    }
-
-    // Try to delete using wrong community ID (test logic changed: now checking if
-    // member exists/belongs is handled inside, but since we don't pass communityId,
-    // this test case might be redundant or needs different logic.
-    // Actually, the original test was "MemberNotInCommunity". Since we don't pass
-    // communityId anymore, we can't check if member belongs to *passed*
-    // communityId.
-    // We can only check if member exists. If member exists, we find its community.
-    // The original test `deleteMember(privateCommunity.getId(), member.getId(),
-    // owner)` was trying to delete a member of publicCommunity using
-    // privateCommunity ID.
-    // With the new signature `deleteMember(memberId, user)`, we can't simulate
-    // "wrong community ID" error because the method looks up the community FROM the
-    // member.
-    // So this test case is effectively obsolete or should test something else (like
-    // user not being in the SAME community as the member).
-    // Let's remove this test case or adapt it. The user said "MemberServiceTest ya
-    // lo he actualizado yo" but clearly didn't.
-    // I will remove this test case as it's no longer applicable in its current form
-    // (mismatching community ID is impossible by design now).
-    // Wait, I should probably replace it with a test that verifies the requester is
-    // in the SAME community.
-    // The next test `deleteMember_RequesterNotMember_Fails` covers "Requester not
-    // member".
-    // So I will just DELETE this test case.
-
-    @Test
-    @DisplayName("Should fail when requesting user is not a member")
-    void deleteMember_RequesterNotMember_Fails() {
-        // User joins
-        Member member = memberService.joinCommunity(publicCommunity.getId(), user);
-
-        // Create non-member user
-        Customer nonMember = new Customer("NonMember", "nonmember@test.com", "password", 444444444L);
-        nonMember = customerRepository.save(nonMember);
-
-        final Customer finalNonMember = nonMember;
-        assertThrows(IllegalArgumentException.class,
-                () -> memberService.deleteMember(member.getId(), finalNonMember));
+        Long memberId = member.getId();
+        
+        assertEquals(MemberRole.PARTICIPANT, member.getMemberRole());
+        
+        // Participant deletes themselves
+        memberService.deleteMember(memberId, user);
+        
+        // Verify deleted
+        assertThrows(IllegalArgumentException.class, () -> 
+            memberService.getMemberById(memberId));
     }
 }

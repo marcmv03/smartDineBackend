@@ -8,6 +8,7 @@ import com.smartDine.entity.Community;
 import com.smartDine.entity.Member;
 import com.smartDine.entity.MemberRole;
 import com.smartDine.entity.User;
+import com.smartDine.exceptions.NoUserIsMemberException;
 import com.smartDine.repository.CommunityRepository;
 import com.smartDine.repository.MemberRepository;
 
@@ -43,44 +44,48 @@ public class MemberService {
         return memberRepository.save(member);
     }
 
+    /**
+     * Get a member by ID
+     * @param id Member ID
+     * @return Member entity
+     * @throws IllegalArgumentException if member not found
+     */
+    @Transactional(readOnly = true)
+    public Member getMemberById(Long id) {
+        return memberRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Member not found with id: " + id));
+    }
+
+    /**
+     * Delete a member by ID
+     * Only allowed if:
+     * - The requesting user is the owner of the community (OWNER role), OR
+     * - The member being deleted is the requesting user themselves
+     * 
+     * @param memberId ID of the member to delete
+     * @param requestingUser User making the delete request
+     * @throws IllegalArgumentException if member not found
+     * @throws NoUserIsMemberException if user lacks permission to delete
+     */
     @Transactional
     public void deleteMember(Long memberId, User requestingUser) {
-        // 1. Find the member to delete
+        // Find the member to delete
         Member memberToDelete = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("Member not found with ID: " + memberId));
+            .orElseThrow(() -> new IllegalArgumentException("Member not found with id: " + memberId));
 
-        // 3. OWNER can never be deleted
-        if (memberToDelete.getMemberRole() == MemberRole.OWNER) {
-            throw new IllegalArgumentException("Cannot delete the community owner");
-        }
+        // Check if requesting user is the owner of the community
+        Member requestingMember = memberRepository.findByUserAndCommunity(
+            requestingUser, memberToDelete.getCommunity()
+        ).orElse(null);
 
-        // 4. Get the requesting user's membership
-        Member requestingMember = memberRepository.findByUserAndCommunity(requestingUser, memberToDelete.getCommunity())
-                .orElseThrow(() -> new IllegalArgumentException("You are not a member of this community"));
+        boolean isOwner = requestingMember != null && requestingMember.getMemberRole() == MemberRole.OWNER;
+        boolean isDeletingSelf = memberToDelete.getUser().getId().equals(requestingUser.getId());
 
-        // 5. Validate permissions based on role
-        MemberRole requestingRole = requestingMember.getMemberRole();
-        MemberRole targetRole = memberToDelete.getMemberRole();
-        boolean isSelfDelete = requestingMember.getId().equals(memberId);
-
-        // PARTICIPANT: can only delete themselves
-        if (requestingRole == MemberRole.PARTICIPANT) {
-            if (!isSelfDelete) {
-                throw new IllegalArgumentException("Participants can only remove themselves");
-            }
-        }
-        // ADMIN: can delete PARTICIPANTS or themselves
-        else if (requestingRole == MemberRole.ADMIN) {
-            if (!isSelfDelete && targetRole != MemberRole.PARTICIPANT) {
-                throw new IllegalArgumentException("Admins can only remove participants");
-            }
-        }
-        // OWNER: can delete PARTICIPANTS and ADMINS (but not themselves - already
-        // protected above)
-        else if (requestingRole == MemberRole.OWNER) {
-            if (isSelfDelete) {
-                throw new IllegalArgumentException("Owner cannot remove themselves");
-            }
+        // Allow deletion if user is owner OR deleting themselves
+        if (!isOwner && !isDeletingSelf) {
+            throw new NoUserIsMemberException(
+                "You do not have permission to delete this member. Only community owners or the member themselves can perform this action."
+            );
         }
 
         memberRepository.delete(memberToDelete);
