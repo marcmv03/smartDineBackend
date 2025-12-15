@@ -73,6 +73,13 @@ public class CommunityController {
         UploadResponse response = communityService.uploadCommunityImage(id, file, user);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("communities/{id}/members")
+    public ResponseEntity<List<MemberDTO>> getCommunityMembers(@PathVariable Long id) {
+        List<Member> members = communityService.getCommunityMembers(id);
+        return ResponseEntity.ok(MemberDTO.fromEntity(members));
+    }
+
     @GetMapping("me/communities")
     public ResponseEntity<List<CommunityDTO>> getMyCommunities(@AuthenticationPrincipal User user) {
         List<Community> communities = communityService.getCommunitiesForUser(user);

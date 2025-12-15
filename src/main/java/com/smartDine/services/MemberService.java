@@ -1,5 +1,7 @@
 package com.smartDine.services;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +56,18 @@ public class MemberService {
     public Member getMemberById(Long id) {
         return memberRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Member not found with id: " + id));
+    }
+
+    /**
+     * Get all members of a community by community ID
+     * @param communityId Community ID
+     * @return List of members
+     */
+    @Transactional(readOnly = true)
+    public List<Member> getMembersByCommunityId(Long communityId) {
+        Community community = communityRepository.findById(communityId)
+            .orElseThrow(() -> new IllegalArgumentException("Community not found with ID: " + communityId));
+        return memberRepository.findByCommunity(community);
     }
 
     /**

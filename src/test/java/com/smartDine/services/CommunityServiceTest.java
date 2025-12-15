@@ -250,4 +250,39 @@ public class CommunityServiceTest {
         assertTrue(customerCommunities.stream().anyMatch(c -> c.getName().equals("Customer Community 1")));
         assertTrue(customerCommunities.stream().anyMatch(c -> c.getName().equals("Business Community 1")));
     }
+
+    @Test
+    @DisplayName("Should get all members of a community")
+    void testGetCommunityMembers() {
+        // Create a community
+        CreateCommunityDTO dto = new CreateCommunityDTO();
+        dto.setName("Test Community Members");
+        dto.setDescription("Description");
+        dto.setVisibility(true);
+        Community community = communityService.createCommunity(dto, testBusiness);
+
+        // Add testCustomer as member
+        Member member = new Member();
+        member.setUser(testCustomer);
+        member.setCommunity(community);
+        member.setMemberRole(MemberRole.PARTICIPANT);
+        memberRepository.save(member);
+
+        // Get members (should be 2: owner + participant)
+        List<Member> members = communityService.getCommunityMembers(community.getId());
+        assertEquals(2, members.size());
+        
+        // Check that one is OWNER and one is PARTICIPANT
+        assertTrue(members.stream().anyMatch(m -> m.getMemberRole() == MemberRole.OWNER));
+        assertTrue(members.stream().anyMatch(m -> m.getMemberRole() == MemberRole.PARTICIPANT));
+        assertTrue(members.stream().anyMatch(m -> m.getUser().getId().equals(testBusiness.getId())));
+        assertTrue(members.stream().anyMatch(m -> m.getUser().getId().equals(testCustomer.getId())));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when getting members of non-existent community")
+    void testGetCommunityMembers_NotFound() {
+        assertThrows(IllegalArgumentException.class, () -> 
+            communityService.getCommunityMembers(99999L));
+    }
 }

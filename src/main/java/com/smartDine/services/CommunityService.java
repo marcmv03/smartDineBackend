@@ -126,4 +126,10 @@ public class CommunityService {
                 .map(Member::getCommunity)
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public List<Member> getCommunityMembers(Long communityId) {
+        Community community = getCommunityById(communityId);
+        return memberRepository.findByCommunity(community);
+    }
 }

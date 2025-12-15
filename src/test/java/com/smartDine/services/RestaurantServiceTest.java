@@ -334,7 +334,7 @@ public class RestaurantServiceTest {
             () -> restaurantService.uploadRestaurantImage(9999L, file, testOwner)
         );
         
-        assertEquals("Restaurant not found with  ID: 9999", exception.getMessage());
+        assertEquals("Restaurante no encontrado con ID: 9999", exception.getMessage());
     }
     
     @Test

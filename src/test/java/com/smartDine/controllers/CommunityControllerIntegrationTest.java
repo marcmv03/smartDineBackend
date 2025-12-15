@@ -166,5 +166,40 @@ public class CommunityControllerIntegrationTest {
         assertEquals("image/jpeg", resp.getBody().getContentType());
         assertEquals(file.getSize(), resp.getBody().getSize());
     }
+
+    @Test
+    public void getCommunityMembers_shouldReturnMembersList() {
+        Member member1 = new Member();
+        member1.setId(1L);
+        member1.setUser(sampleOwner);
+        member1.setCommunity(sampleCommunity);
+        member1.setMemberRole(MemberRole.OWNER);
+
+        Member member2 = new Member();
+        member2.setId(2L);
+        member2.setUser(sampleUser);
+        member2.setCommunity(sampleCommunity);
+        member2.setMemberRole(MemberRole.PARTICIPANT);
+
+        when(communityService.getCommunityMembers(100L)).thenReturn(List.of(member1, member2));
+
+        ResponseEntity<List<MemberDTO>> resp = communityController.getCommunityMembers(100L);
+
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals(2, resp.getBody().size());
+        assertEquals("OWNER", resp.getBody().get(0).getMemberRole());
+        assertEquals("PARTICIPANT", resp.getBody().get(1).getMemberRole());
+    }
+
+    @Test
+    public void getCommunityMembers_shouldThrowExceptionWhenNotFound() {
+        when(communityService.getCommunityMembers(9999L))
+            .thenThrow(new IllegalArgumentException("Community not found with ID: 9999"));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            communityController.getCommunityMembers(9999L);
+        });
+    }
 }
 
