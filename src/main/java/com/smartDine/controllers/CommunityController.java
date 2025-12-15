@@ -80,11 +80,12 @@ public class CommunityController {
         var pageable = org.springframework.data.domain.PageRequest.of(page, size);
         var posts = communityPostService.getPostsByCommunity(communityId, search, pageable, user != null ? user.getId() : null);
         return ResponseEntity.ok(posts.getContent());
+    }
     @GetMapping("communities/{id}/members")
     public ResponseEntity<List<MemberDTO>> getCommunityMembers(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
-        List<Member> members = communityService.getCommunityMembers(id, user);
+        List<Member> members = communityService.getCommunityMembers(id);
         return ResponseEntity.ok(MemberDTO.fromEntity(members));
     }
 
