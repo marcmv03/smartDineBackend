@@ -19,9 +19,11 @@ import com.smartDine.dto.CommunityDTO;
 import com.smartDine.dto.CreateCommunityDTO;
 import com.smartDine.dto.MemberDTO;
 import com.smartDine.dto.UploadResponse;
+import com.smartDine.dto.community.post.CommunityPostSummaryDTO;
 import com.smartDine.entity.Community;
 import com.smartDine.entity.Member;
 import com.smartDine.entity.User;
+import com.smartDine.services.CommunityPostService;
 import com.smartDine.services.CommunityService;
 import com.smartDine.services.MemberService;
 
@@ -36,6 +38,9 @@ public class CommunityController {
 
     @Autowired
     private MemberService memberService;
+
+    @Autowired
+    private CommunityPostService communityPostService;
 
     @GetMapping("communities")
     public ResponseEntity<List<CommunityDTO>> getCommunities(@RequestParam(required = false) String search) {
@@ -65,6 +70,16 @@ public class CommunityController {
         return ResponseEntity.ok(MemberDTO.fromEntity(member));
     }
 
+    @GetMapping("communities/{communityId}/posts")
+    public ResponseEntity<List<CommunityPostSummaryDTO>> getPostsForCommunity(
+            @PathVariable Long communityId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @AuthenticationPrincipal User user) {
+        var pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        var posts = communityPostService.getPostsByCommunity(communityId, search, pageable, user != null ? user.getId() : null);
+        return ResponseEntity.ok(posts.getContent());
     @GetMapping("communities/{id}/members")
     public ResponseEntity<List<MemberDTO>> getCommunityMembers(
             @PathVariable Long id,
