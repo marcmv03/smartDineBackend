@@ -827,6 +827,169 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/communities/{communityId}/posts:
+    get:
+      tags:
+        - Communities
+      summary: List posts for a community
+      description: Returns community posts respecting community visibility. Private communities require membership.
+      parameters:
+        - in: path
+          name: communityId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommunityPostSummary'
+        '403':
+          description: Forbidden when trying to access a private community without membership
+      security:
+        - bearerAuth: []
+  /smartdine/api/community/posts:
+    post:
+      tags:
+        - Communities
+      summary: Create community post
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommunityPostRequest'
+      responses:
+        '200':
+          description: Created post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityPost'
+        '403':
+          description: User not allowed to create posts
+  /smartdine/api/community/posts/{postId}:
+    get:
+      tags:
+        - Communities
+      summary: Get post
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Post detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityPost'
+        '404':
+          description: Post not found
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - Communities
+      summary: Update post
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCommunityPostRequest'
+      responses:
+        '200':
+          description: Updated post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityPost'
+        '403':
+          description: Not allowed to update
+    delete:
+      tags:
+        - Communities
+      summary: Delete post
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+        '403':
+          description: Not allowed
+  /smartdine/api/community/members/{memberId}/posts:
+    get:
+      tags:
+        - Communities
+      summary: List posts by member
+      parameters:
+        - in: path
+          name: memberId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommunityPostSummary'
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
