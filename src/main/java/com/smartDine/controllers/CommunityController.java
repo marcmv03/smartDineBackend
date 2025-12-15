@@ -80,6 +80,12 @@ public class CommunityController {
         var pageable = org.springframework.data.domain.PageRequest.of(page, size);
         var posts = communityPostService.getPostsByCommunity(communityId, search, pageable, user != null ? user.getId() : null);
         return ResponseEntity.ok(posts.getContent());
+    @GetMapping("communities/{id}/members")
+    public ResponseEntity<List<MemberDTO>> getCommunityMembers(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        List<Member> members = communityService.getCommunityMembers(id);
+        return ResponseEntity.ok(MemberDTO.fromEntity(members));
     }
 
     @PostMapping("communities/{id}/images")
@@ -90,9 +96,16 @@ public class CommunityController {
         UploadResponse response = communityService.uploadCommunityImage(id, file, user);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("communities/{id}/members")
+    public ResponseEntity<List<MemberDTO>> getCommunityMembers(@PathVariable Long id) {
+        List<Member> members = communityService.getCommunityMembers(id);
+        return ResponseEntity.ok(MemberDTO.fromEntity(members));
+    }
+
     @GetMapping("me/communities")
     public ResponseEntity<List<CommunityDTO>> getMyCommunities(@AuthenticationPrincipal User user) {
         List<Community> communities = communityService.getCommunitiesForUser(user);
         return ResponseEntity.ok(CommunityDTO.fromEntity(communities));
-}
+    }
 }

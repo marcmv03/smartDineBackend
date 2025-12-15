@@ -25,6 +25,8 @@ public class RestaurantService {
     
     @Autowired
     private ImageAdapter imageAdapter;
+
+    private static final String NOT_FOUND_MSG = "Restaurante no encontrado con ID: %d";
     
     /**
      * Get all restaurants or search by name
@@ -42,7 +44,7 @@ public class RestaurantService {
      */
     public Restaurant getRestaurantById(Long id) {
         return restaurantRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurante no encontrado con ID: " + id));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, id)));
     }
     
     /**
@@ -70,7 +72,7 @@ public class RestaurantService {
      */
     public Restaurant updateRestaurant(Long id, RestaurantDTO restaurantDTO) {
         Restaurant existingRestaurant = restaurantRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurante no encontrado con ID: " + id));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, id)));
         
         // Check if name is being changed and if new name already exists
         if (!existingRestaurant.getName().equalsIgnoreCase(restaurantDTO.getName())) {
@@ -94,14 +96,14 @@ public class RestaurantService {
      */
     public void deleteRestaurant(Long id) {
         if (!restaurantRepository.existsById(id)) {
-            throw new IllegalArgumentException("Restaurante no encontrado con ID: " + id);
+            throw new IllegalArgumentException(String.format(NOT_FOUND_MSG, id));
         }
         restaurantRepository.deleteById(id);
     }
 
     public boolean isOwnerOfRestaurant(Long restaurantId, Business business) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with  ID: " + restaurantId));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, restaurantId)));
         return restaurant.getOwner().getId().equals(business.getId());
     }
 
@@ -122,7 +124,7 @@ public class RestaurantService {
     }
     public boolean  addMenuItem(Long restaurantId, MenuItem menuItem) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, restaurantId)));
         List<MenuItem> menu = restaurant.getMenu();
         if (menu == null) {
             menu = new java.util.ArrayList<>();
@@ -134,7 +136,7 @@ public class RestaurantService {
     }
     public List<MenuItem> getMenuItems(Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, restaurantId)));
         return restaurant.getMenu();
     }
 
@@ -143,7 +145,7 @@ public class RestaurantService {
             throw new IllegalArgumentException("TimeSlot must be associated with a restaurant");
         }
         Restaurant restaurant = restaurantRepository.findById(timeSlot.getRestaurant().getId())
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + timeSlot.getRestaurant().getId()));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, timeSlot.getRestaurant().getId())));
         restaurant.getTimeSlots().add(timeSlot);
         timeSlot.setRestaurant(restaurant);
         restaurantRepository.save(restaurant);
@@ -152,13 +154,13 @@ public class RestaurantService {
 
     public List<TimeSlot> getTimeSlots(Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, restaurantId)));
         return restaurant.getTimeSlots();
     }
     
     public boolean addTable(Long restaurantId, com.smartDine.entity.RestaurantTable table) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, restaurantId)));
         List<com.smartDine.entity.RestaurantTable> tables = restaurant.getTables();
         if (tables == null) {
             tables = new java.util.ArrayList<>();
@@ -171,7 +173,7 @@ public class RestaurantService {
     
     public List<RestaurantTable> getTables(Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, restaurantId)));
         return restaurant.getTables();
     }
     
@@ -212,7 +214,7 @@ public class RestaurantService {
         
         // Assign the image to the restaurant
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+            .orElseThrow(() -> new IllegalArgumentException(String.format(NOT_FOUND_MSG, restaurantId)));
         restaurant.setImageUrl(keyName);
         restaurantRepository.save(restaurant);
         

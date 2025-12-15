@@ -10,6 +10,7 @@ import com.smartDine.dto.ReservationDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
+import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
@@ -57,6 +58,7 @@ public class ReservationService {
         reservation.setRestaurantTable(availableTable);
         reservation.setDate(reservationDTO.getDate());
         reservation.setNumGuests(reservationDTO.getNumCustomers());
+        reservation.setStatus(ReservationStatus.CONFIRMED);
         reservation.setCreatedAt(LocalDate.now());
         
         return reservationRepository.save(reservation);
