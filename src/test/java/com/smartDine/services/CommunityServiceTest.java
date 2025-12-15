@@ -82,7 +82,7 @@ public class CommunityServiceTest {
         assertNotNull(community.getId());
         assertEquals("Business Community", community.getName());
         assertEquals(CommunityType.RESTAURANT, community.getCommunityType());
-        
+
         // Check owner member
         List<Member> members = memberRepository.findByCommunity(community);
         assertEquals(1, members.size());
@@ -103,7 +103,7 @@ public class CommunityServiceTest {
         assertNotNull(community.getId());
         assertEquals("Customer Community", community.getName());
         assertEquals(CommunityType.USER, community.getCommunityType());
-        
+
         // Check owner member
         List<Member> members = memberRepository.findByCommunity(community);
         assertEquals(1, members.size());
@@ -154,11 +154,11 @@ public class CommunityServiceTest {
         dto.setName("Test Community");
         dto.setDescription("Description");
         dto.setVisibility(true);
-        
+
         Community created = communityService.createCommunity(dto, testBusiness);
-        
+
         Community found = communityService.getCommunityById(created.getId());
-        
+
         assertNotNull(found);
         assertEquals(created.getId(), found.getId());
         assertEquals("Test Community", found.getName());
@@ -169,10 +169,9 @@ public class CommunityServiceTest {
     @DisplayName("Should throw exception when community ID does not exist")
     void testGetCommunityById_NotFound() {
         IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> communityService.getCommunityById(9999L)
-        );
-        
+                IllegalArgumentException.class,
+                () -> communityService.getCommunityById(9999L));
+
         assertEquals("Community not found with ID: 9999", exception.getMessage());
     }
 
@@ -189,7 +188,7 @@ public class CommunityServiceTest {
         when(imageAdapter.uploadImage(any(), any())).thenReturn(mockResponse);
 
         UploadResponse response = communityService.uploadCommunityImage(community.getId(), file, testBusiness);
-        
+
         assertNotNull(response);
         Community updated = communityService.getCommunityById(community.getId());
         assertNotNull(updated.getImageUrl());
@@ -205,8 +204,8 @@ public class CommunityServiceTest {
 
         MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "content".getBytes());
 
-        assertThrows(IllegalArgumentException.class, () -> 
-            communityService.uploadCommunityImage(community.getId(), file, testCustomer));
+        assertThrows(IllegalArgumentException.class,
+                () -> communityService.uploadCommunityImage(community.getId(), file, testCustomer));
     }
 
     @Test
@@ -244,10 +243,46 @@ public class CommunityServiceTest {
         assertTrue(businessCommunities.stream().anyMatch(c -> c.getName().equals("Business Community 1")));
         assertTrue(businessCommunities.stream().anyMatch(c -> c.getName().equals("Business Community 2")));
 
-        // Get communities for testCustomer (should be owner of 1 and member of 1 = 2 total)
+        // Get communities for testCustomer (should be owner of 1 and member of 1 = 2
+        // total)
         List<Community> customerCommunities = communityService.getCommunitiesForUser(testCustomer);
         assertEquals(2, customerCommunities.size());
         assertTrue(customerCommunities.stream().anyMatch(c -> c.getName().equals("Customer Community 1")));
         assertTrue(customerCommunities.stream().anyMatch(c -> c.getName().equals("Business Community 1")));
+    }
+
+    @Test
+    @DisplayName("Should get all members of a community")
+    void testGetCommunityMembers() {
+        // Create a community
+        CreateCommunityDTO dto = new CreateCommunityDTO();
+        dto.setName("Test Community Members");
+        dto.setDescription("Description");
+        dto.setVisibility(true);
+        Community community = communityService.createCommunity(dto, testBusiness);
+
+        // Add testCustomer as member
+        Member member = new Member();
+        member.setUser(testCustomer);
+        member.setCommunity(community);
+        member.setMemberRole(MemberRole.PARTICIPANT);
+        memberRepository.save(member);
+
+        // Get members (should be 2: owner + participant)
+        List<Member> members = communityService.getCommunityMembers(community.getId());
+        assertEquals(2, members.size());
+        
+        // Check that one is OWNER and one is PARTICIPANT
+        assertTrue(members.stream().anyMatch(m -> m.getMemberRole() == MemberRole.OWNER));
+        assertTrue(members.stream().anyMatch(m -> m.getMemberRole() == MemberRole.PARTICIPANT));
+        assertTrue(members.stream().anyMatch(m -> m.getUser().getId().equals(testBusiness.getId())));
+        assertTrue(members.stream().anyMatch(m -> m.getUser().getId().equals(testCustomer.getId())));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when getting members of non-existent community")
+    void testGetCommunityMembers_NotFound() {
+        assertThrows(IllegalArgumentException.class, () -> 
+            communityService.getCommunityMembers(99999L));
     }
 }

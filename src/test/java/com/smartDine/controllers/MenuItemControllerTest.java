@@ -37,9 +37,13 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartDine.dto.DishDTO;
 import com.smartDine.dto.DrinkDTO;
+import com.smartDine.dto.UpdateDishDTO;
+import com.smartDine.dto.UpdateDrinkDTO;
 import com.smartDine.dto.UploadResponse;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.CourseType;
+import com.smartDine.entity.Dish;
+import com.smartDine.entity.Drink;
 import com.smartDine.entity.DrinkType;
 import com.smartDine.entity.Element;
 import com.smartDine.services.MenuItemService;
@@ -359,6 +363,332 @@ public class MenuItemControllerTest {
         } catch (IllegalArgumentException e) {
             assertEquals("You do not own this restaurant", e.getMessage());
             System.out.println("✓ Exception propagation test passed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Tests successful dish update with valid data.
+     */
+    @Test
+    public void updateDish_Success() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 10L;
+        
+        UpdateDishDTO updateDishDTO = new UpdateDishDTO();
+        updateDishDTO.setName("Updated Pasta");
+        updateDishDTO.setDescription("Updated description");
+        updateDishDTO.setCourseType(CourseType.APPETIZER);
+        List<Element> elements = new ArrayList<>();
+        elements.add(Element.GLUTEN);
+        updateDishDTO.setElements(elements);
+
+        Dish updatedDish = new Dish();
+        updatedDish.setId(menuItemId);
+        updatedDish.setName("Updated Pasta");
+        updatedDish.setDescription("Updated description");
+        updatedDish.setCourseType(CourseType.APPETIZER);
+        updatedDish.setElements(elements);
+        updatedDish.setPrice(15.99);
+
+        // Mock service to return updated dish
+        when(menuItemService.updateDish(eq(restaurantId), eq(menuItemId), any(UpdateDishDTO.class), eq(businessOwner)))
+            .thenReturn(updatedDish);
+
+        // When
+        ResponseEntity<com.smartDine.dto.MenuItemDTO> response = menuItemController.updateDish(
+            restaurantId, menuItemId, updateDishDTO, businessOwner);
+
+        // Then
+        assertNotNull(response, "Response should not be null");
+        assertEquals(HttpStatus.OK, response.getStatusCode(), "Should return OK status");
+        
+        com.smartDine.dto.MenuItemDTO body = response.getBody();
+        assertNotNull(body, "Response body should not be null");
+        assertTrue(body instanceof DishDTO, "Response should be DishDTO");
+        
+        DishDTO dishDTO = (DishDTO) body;
+        assertEquals("Updated Pasta", dishDTO.getName());
+        assertEquals("Updated description", dishDTO.getDescription());
+        assertEquals(CourseType.APPETIZER, dishDTO.getCourseType());
+
+        verify(menuItemService, times(1)).updateDish(
+            eq(restaurantId), eq(menuItemId), any(UpdateDishDTO.class), eq(businessOwner));
+
+        System.out.println("✓ Update dish test passed:");
+        System.out.println("  - Name: " + dishDTO.getName());
+        System.out.println("  - Course Type: " + dishDTO.getCourseType());
+    }
+
+    /**
+     * Tests that unauthorized user cannot update a dish.
+     */
+    @Test
+    public void updateDish_Unauthorized_ShouldReturnUnauthorized() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 10L;
+        
+        UpdateDishDTO updateDishDTO = new UpdateDishDTO();
+        updateDishDTO.setName("Test Dish");
+        updateDishDTO.setDescription("Test");
+        updateDishDTO.setCourseType(CourseType.MAIN_COURSE);
+
+        // When
+        ResponseEntity<com.smartDine.dto.MenuItemDTO> response = menuItemController.updateDish(
+            restaurantId, menuItemId, updateDishDTO, null);
+
+        // Then
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode(), 
+            "Should return UNAUTHORIZED when user is null");
+
+        verify(menuItemService, times(0)).updateDish(anyLong(), anyLong(), any(UpdateDishDTO.class), any());
+
+        System.out.println("✓ Unauthorized update dish test passed");
+    }
+
+    /**
+     * Tests that service exception for duplicate name is propagated.
+     */
+    @Test
+    public void updateDish_DuplicateName_ShouldThrowException() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 10L;
+        
+        UpdateDishDTO updateDishDTO = new UpdateDishDTO();
+        updateDishDTO.setName("Existing Dish Name");
+        updateDishDTO.setDescription("Test");
+        updateDishDTO.setCourseType(CourseType.MAIN_COURSE);
+
+        // Mock service to throw exception for duplicate name
+        when(menuItemService.updateDish(eq(restaurantId), eq(menuItemId), any(UpdateDishDTO.class), eq(businessOwner)))
+            .thenThrow(new IllegalArgumentException("A dish with name 'Existing Dish Name' already exists in this restaurant"));
+
+        // When/Then
+        try {
+            menuItemController.updateDish(restaurantId, menuItemId, updateDishDTO, businessOwner);
+            assertTrue(false, "Should have thrown IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("already exists"));
+            System.out.println("✓ Duplicate name validation test passed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Tests that updating wrong menu item type throws exception.
+     */
+    @Test
+    public void updateDish_WrongType_ShouldThrowException() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 10L; // This is actually a drink
+        
+        UpdateDishDTO updateDishDTO = new UpdateDishDTO();
+        updateDishDTO.setName("Test Dish");
+        updateDishDTO.setDescription("Test");
+        updateDishDTO.setCourseType(CourseType.MAIN_COURSE);
+
+        // Mock service to throw exception for wrong type
+        when(menuItemService.updateDish(eq(restaurantId), eq(menuItemId), any(UpdateDishDTO.class), eq(businessOwner)))
+            .thenThrow(new IllegalArgumentException("Menu item with ID " + menuItemId + " is not a dish"));
+
+        // When/Then
+        try {
+            menuItemController.updateDish(restaurantId, menuItemId, updateDishDTO, businessOwner);
+            assertTrue(false, "Should have thrown IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("is not a dish"));
+            System.out.println("✓ Wrong type validation test passed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Tests successful drink update with valid data.
+     */
+    @Test
+    public void updateDrink_Success() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 20L;
+        
+        UpdateDrinkDTO updateDrinkDTO = new UpdateDrinkDTO();
+        updateDrinkDTO.setName("Updated Pepsi");
+        updateDrinkDTO.setDescription("Updated description");
+        updateDrinkDTO.setDrinkType(DrinkType.SOFT_DRINK);
+
+        Drink updatedDrink = new Drink();
+        updatedDrink.setId(menuItemId);
+        updatedDrink.setName("Updated Pepsi");
+        updatedDrink.setDescription("Updated description");
+        updatedDrink.setDrinkType(DrinkType.SOFT_DRINK);
+        updatedDrink.setPrice(3.50);
+
+        // Mock service to return updated drink
+        when(menuItemService.updateDrink(eq(restaurantId), eq(menuItemId), any(UpdateDrinkDTO.class), eq(businessOwner)))
+            .thenReturn(updatedDrink);
+
+        // When
+        ResponseEntity<com.smartDine.dto.MenuItemDTO> response = menuItemController.updateDrink(
+            restaurantId, menuItemId, updateDrinkDTO, businessOwner);
+
+        // Then
+        assertNotNull(response, "Response should not be null");
+        assertEquals(HttpStatus.OK, response.getStatusCode(), "Should return OK status");
+        
+        com.smartDine.dto.MenuItemDTO body = response.getBody();
+        assertNotNull(body, "Response body should not be null");
+        assertTrue(body instanceof DrinkDTO, "Response should be DrinkDTO");
+        
+        DrinkDTO drinkDTO = (DrinkDTO) body;
+        assertEquals("Updated Pepsi", drinkDTO.getName());
+        assertEquals("Updated description", drinkDTO.getDescription());
+        assertEquals(DrinkType.SOFT_DRINK, drinkDTO.getDrinkType());
+
+        verify(menuItemService, times(1)).updateDrink(
+            eq(restaurantId), eq(menuItemId), any(UpdateDrinkDTO.class), eq(businessOwner));
+
+        System.out.println("✓ Update drink test passed:");
+        System.out.println("  - Name: " + drinkDTO.getName());
+        System.out.println("  - Drink Type: " + drinkDTO.getDrinkType());
+    }
+
+    /**
+     * Tests that unauthorized user cannot update a drink.
+     */
+    @Test
+    public void updateDrink_Unauthorized_ShouldReturnUnauthorized() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 20L;
+        
+        UpdateDrinkDTO updateDrinkDTO = new UpdateDrinkDTO();
+        updateDrinkDTO.setName("Test Drink");
+        updateDrinkDTO.setDescription("Test");
+        updateDrinkDTO.setDrinkType(DrinkType.BEER);
+
+        // When
+        ResponseEntity<com.smartDine.dto.MenuItemDTO> response = menuItemController.updateDrink(
+            restaurantId, menuItemId, updateDrinkDTO, null);
+
+        // Then
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode(), 
+            "Should return UNAUTHORIZED when user is null");
+
+        verify(menuItemService, times(0)).updateDrink(anyLong(), anyLong(), any(UpdateDrinkDTO.class), any());
+
+        System.out.println("✓ Unauthorized update drink test passed");
+    }
+
+    /**
+     * Tests that service exception for duplicate name is propagated for drinks.
+     */
+    @Test
+    public void updateDrink_DuplicateName_ShouldThrowException() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 20L;
+        
+        UpdateDrinkDTO updateDrinkDTO = new UpdateDrinkDTO();
+        updateDrinkDTO.setName("Existing Drink Name");
+        updateDrinkDTO.setDescription("Test");
+        updateDrinkDTO.setDrinkType(DrinkType.SOFT_DRINK);
+
+        // Mock service to throw exception for duplicate name
+        when(menuItemService.updateDrink(eq(restaurantId), eq(menuItemId), any(UpdateDrinkDTO.class), eq(businessOwner)))
+            .thenThrow(new IllegalArgumentException("A drink with name 'Existing Drink Name' already exists in this restaurant"));
+
+        // When/Then
+        try {
+            menuItemController.updateDrink(restaurantId, menuItemId, updateDrinkDTO, businessOwner);
+            assertTrue(false, "Should have thrown IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("already exists"));
+            System.out.println("✓ Duplicate drink name validation test passed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Tests that updating wrong menu item type throws exception for drinks.
+     */
+    @Test
+    public void updateDrink_WrongType_ShouldThrowException() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 20L; // This is actually a dish
+        
+        UpdateDrinkDTO updateDrinkDTO = new UpdateDrinkDTO();
+        updateDrinkDTO.setName("Test Drink");
+        updateDrinkDTO.setDescription("Test");
+        updateDrinkDTO.setDrinkType(DrinkType.SOFT_DRINK);
+
+        // Mock service to throw exception for wrong type
+        when(menuItemService.updateDrink(eq(restaurantId), eq(menuItemId), any(UpdateDrinkDTO.class), eq(businessOwner)))
+            .thenThrow(new IllegalArgumentException("Menu item with ID " + menuItemId + " is not a drink"));
+
+        // When/Then
+        try {
+            menuItemController.updateDrink(restaurantId, menuItemId, updateDrinkDTO, businessOwner);
+            assertTrue(false, "Should have thrown IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("is not a drink"));
+            System.out.println("✓ Wrong type validation test for drink passed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Tests that non-owner business cannot update a dish.
+     */
+    @Test
+    public void updateDish_NonOwner_ShouldThrowException() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 10L;
+        
+        UpdateDishDTO updateDishDTO = new UpdateDishDTO();
+        updateDishDTO.setName("Test Dish");
+        updateDishDTO.setDescription("Test");
+        updateDishDTO.setCourseType(CourseType.MAIN_COURSE);
+
+        // Mock service to throw exception for non-owner
+        when(menuItemService.updateDish(eq(restaurantId), eq(menuItemId), any(UpdateDishDTO.class), eq(businessOwner)))
+            .thenThrow(new IllegalArgumentException("You do not own this restaurant"));
+
+        // When/Then
+        try {
+            menuItemController.updateDish(restaurantId, menuItemId, updateDishDTO, businessOwner);
+            assertTrue(false, "Should have thrown IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertEquals("You do not own this restaurant", e.getMessage());
+            System.out.println("✓ Non-owner validation test passed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Tests that non-owner business cannot update a drink.
+     */
+    @Test
+    public void updateDrink_NonOwner_ShouldThrowException() {
+        // Given
+        Long restaurantId = 1L;
+        Long menuItemId = 20L;
+        
+        UpdateDrinkDTO updateDrinkDTO = new UpdateDrinkDTO();
+        updateDrinkDTO.setName("Test Drink");
+        updateDrinkDTO.setDescription("Test");
+        updateDrinkDTO.setDrinkType(DrinkType.SOFT_DRINK);
+
+        // Mock service to throw exception for non-owner
+        when(menuItemService.updateDrink(eq(restaurantId), eq(menuItemId), any(UpdateDrinkDTO.class), eq(businessOwner)))
+            .thenThrow(new IllegalArgumentException("You do not own this restaurant"));
+
+        // When/Then
+        try {
+            menuItemController.updateDrink(restaurantId, menuItemId, updateDrinkDTO, businessOwner);
+            assertTrue(false, "Should have thrown IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertEquals("You do not own this restaurant", e.getMessage());
+            System.out.println("✓ Non-owner validation test for drink passed: " + e.getMessage());
         }
     }
 }

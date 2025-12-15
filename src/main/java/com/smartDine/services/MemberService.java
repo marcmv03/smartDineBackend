@@ -1,5 +1,7 @@
 package com.smartDine.services;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,6 +10,7 @@ import com.smartDine.entity.Community;
 import com.smartDine.entity.Member;
 import com.smartDine.entity.MemberRole;
 import com.smartDine.entity.User;
+import com.smartDine.exceptions.NoUserIsMemberException;
 import com.smartDine.repository.CommunityRepository;
 import com.smartDine.repository.MemberRepository;
 
@@ -41,5 +44,64 @@ public class MemberService {
         member.setMemberRole(MemberRole.PARTICIPANT);
 
         return memberRepository.save(member);
+    }
+
+    /**
+     * Get a member by ID
+     * @param id Member ID
+     * @return Member entity
+     * @throws IllegalArgumentException if member not found
+     */
+    @Transactional(readOnly = true)
+    public Member getMemberById(Long id) {
+        return memberRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Member not found with id: " + id));
+    }
+
+    /**
+     * Get all members of a community by community ID
+     * @param communityId Community ID
+     * @return List of members
+     */
+    @Transactional(readOnly = true)
+    public List<Member> getMembersByCommunityId(Long communityId) {
+        Community community = communityRepository.findById(communityId)
+            .orElseThrow(() -> new IllegalArgumentException("Community not found with ID: " + communityId));
+        return memberRepository.findByCommunity(community);
+    }
+
+    /**
+     * Delete a member by ID
+     * Only allowed if:
+     * - The requesting user is the owner of the community (OWNER role), OR
+     * - The member being deleted is the requesting user themselves
+     * 
+     * @param memberId ID of the member to delete
+     * @param requestingUser User making the delete request
+     * @throws IllegalArgumentException if member not found
+     * @throws NoUserIsMemberException if user lacks permission to delete
+     */
+    @Transactional
+    public void deleteMember(Long memberId, User requestingUser) {
+        // Find the member to delete
+        Member memberToDelete = memberRepository.findById(memberId)
+            .orElseThrow(() -> new IllegalArgumentException("Member not found with id: " + memberId));
+
+        // Check if requesting user is the owner of the community
+        Member requestingMember = memberRepository.findByUserAndCommunity(
+            requestingUser, memberToDelete.getCommunity()
+        ).orElse(null);
+
+        boolean isOwner = requestingMember != null && requestingMember.getMemberRole() == MemberRole.OWNER;
+        boolean isDeletingSelf = memberToDelete.getUser().getId().equals(requestingUser.getId());
+
+        // Allow deletion if user is owner OR deleting themselves
+        if (!isOwner && !isDeletingSelf) {
+            throw new NoUserIsMemberException(
+                "You do not have permission to delete this member. Only community owners or the member themselves can perform this action."
+            );
+        }
+
+        memberRepository.delete(memberToDelete);
     }
 }

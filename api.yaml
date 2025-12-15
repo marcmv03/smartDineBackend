@@ -27,7 +27,38 @@ tags:
     description: Retrieve the authenticated user profile.
   - name: Images
     description: Upload and retrieve images for restaurants and menu items.
+  - name: Communities
+    description: Manage communities and members.
 paths:
+  /smartdine/api/communities/{id}/members:
+    get:
+      tags:
+        - Communities
+      summary: Get members of a community
+      operationId: getCommunityMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the community
+      responses:
+        '200':
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+        '403':
+          description: Forbidden - User is not a member of the private community
+        '404':
+          description: Community not found
   /smartdine/api/auth/register/customer:
     post:
       tags:
@@ -1345,60 +1376,29 @@ components:
         customerId:
           type: integer
           format: int64
-        numCustomers:
-          type: integer
         date:
           type: string
           format: date
-    CommunityPost:
+    Member:
       type: object
       properties:
         id:
           type: integer
-        title:
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        userName:
           type: string
-        description:
+        communityId:
+          type: integer
+          format: int64
+        memberRole:
           type: string
-        publishedAt:
+          enum:
+            - OWNER
+            - ADMIN
+            - PARTICIPANT
+        joinedAt:
           type: string
           format: date-time
-        communityId:
-          type: integer
-        authorId:
-          type: integer
-        authorName:
-          type: string
-    CommunityPostSummary:
-      type: object
-      properties:
-        id:
-          type: integer
-        title:
-          type: string
-        publishedAt:
-          type: string
-          format: date-time
-        communityId:
-          type: integer
-        authorId:
-          type: integer
-    CreateCommunityPostRequest:
-      type: object
-      required:
-        - communityId
-        - title
-        - description
-      properties:
-        communityId:
-          type: integer
-        title:
-          type: string
-        description:
-          type: string
-    UpdateCommunityPostRequest:
-      type: object
-      properties:
-        title:
-          type: string
-        description:
-          type: string
