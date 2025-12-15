@@ -69,7 +69,7 @@ public class CommunityController {
     public ResponseEntity<List<MemberDTO>> getCommunityMembers(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
-        List<Member> members = communityService.getCommunityMembers(id, user);
+        List<Member> members = communityService.getCommunityMembers(id);
         return ResponseEntity.ok(MemberDTO.fromEntity(members));
     }
 
