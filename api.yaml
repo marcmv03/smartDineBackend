@@ -1379,11 +1379,59 @@ components:
         date:
           type: string
           format: date
+    CommunityPost:
     Member:
       type: object
       properties:
         id:
           type: integer
+        title:
+          type: string
+        description:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        communityId:
+          type: integer
+        authorId:
+          type: integer
+        authorName:
+          type: string
+    CommunityPostSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        communityId:
+          type: integer
+        authorId:
+          type: integer
+    CreateCommunityPostRequest:
+      type: object
+      required:
+        - communityId
+        - title
+        - description
+      properties:
+        communityId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+    UpdateCommunityPostRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
           format: int64
         userId:
           type: integer
