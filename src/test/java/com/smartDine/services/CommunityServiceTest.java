@@ -252,35 +252,13 @@ public class CommunityServiceTest {
     }
 
     @Test
-    @DisplayName("Should get members of public community")
-    void testGetCommunityMembers_Public() {
+    @DisplayName("Should get all members of a community")
+    void testGetCommunityMembers() {
+        // Create a community
         CreateCommunityDTO dto = new CreateCommunityDTO();
-        dto.setName("Public Community");
-        dto.setDescription("Desc");
+        dto.setName("Test Community Members");
+        dto.setDescription("Description");
         dto.setVisibility(true);
-        Community community = communityService.createCommunity(dto, testBusiness);
-
-        // Add another member
-        Member member = new Member();
-        member.setUser(testCustomer);
-        member.setCommunity(community);
-        member.setMemberRole(MemberRole.PARTICIPANT);
-        memberRepository.save(member);
-
-        // Refresh community members
-        community = communityService.getCommunityById(community.getId());
-
-        List<Member> members = communityService.getCommunityMembers(community.getId(), testCustomer);
-        assertEquals(2, members.size());
-    }
-
-    @Test
-    @DisplayName("Should get members of private community if member")
-    void testGetCommunityMembers_Private_Member() {
-        CreateCommunityDTO dto = new CreateCommunityDTO();
-        dto.setName("Private Community");
-        dto.setDescription("Desc");
-        dto.setVisibility(false);
         Community community = communityService.createCommunity(dto, testBusiness);
 
         // Add testCustomer as member
@@ -290,20 +268,21 @@ public class CommunityServiceTest {
         member.setMemberRole(MemberRole.PARTICIPANT);
         memberRepository.save(member);
 
-        List<Member> members = communityService.getCommunityMembers(community.getId(), testCustomer);
+        // Get members (should be 2: owner + participant)
+        List<Member> members = communityService.getCommunityMembers(community.getId());
         assertEquals(2, members.size());
+        
+        // Check that one is OWNER and one is PARTICIPANT
+        assertTrue(members.stream().anyMatch(m -> m.getMemberRole() == MemberRole.OWNER));
+        assertTrue(members.stream().anyMatch(m -> m.getMemberRole() == MemberRole.PARTICIPANT));
+        assertTrue(members.stream().anyMatch(m -> m.getUser().getId().equals(testBusiness.getId())));
+        assertTrue(members.stream().anyMatch(m -> m.getUser().getId().equals(testCustomer.getId())));
     }
 
     @Test
-    @DisplayName("Should fail to get members of private community if not member")
-    void testGetCommunityMembers_Private_NotMember() {
-        CreateCommunityDTO dto = new CreateCommunityDTO();
-        dto.setName("Private Community 2");
-        dto.setDescription("Desc");
-        dto.setVisibility(false);
-        Community community = communityService.createCommunity(dto, testBusiness);
-
-        assertThrows(IllegalArgumentException.class,
-                () -> communityService.getCommunityMembers(community.getId(), testCustomer));
+    @DisplayName("Should throw exception when getting members of non-existent community")
+    void testGetCommunityMembers_NotFound() {
+        assertThrows(IllegalArgumentException.class, () -> 
+            communityService.getCommunityMembers(99999L));
     }
 }

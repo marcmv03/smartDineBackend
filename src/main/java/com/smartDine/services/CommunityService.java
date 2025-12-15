@@ -129,17 +129,8 @@ public class CommunityService {
     }
 
     @Transactional(readOnly = true)
-    public List<Member> getCommunityMembers(Long communityId, User requestingUser) {
+    public List<Member> getCommunityMembers(Long communityId) {
         Community community = getCommunityById(communityId);
-
-        if (!community.isVisibility()) {
-            // Private community: check if user is a member
-            boolean isMember = memberRepository.findByUserAndCommunity(requestingUser, community).isPresent();
-            if (!isMember) {
-                throw new IllegalArgumentException("You must be a member to view members of a private community");
-            }
-        }
-
         return memberRepository.findByCommunity(community);
     }
 }

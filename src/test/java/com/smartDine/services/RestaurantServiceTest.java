@@ -339,10 +339,11 @@ public class RestaurantServiceTest {
 
         // When/Then
         IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> restaurantService.uploadRestaurantImage(9999L, file, testOwner));
-
-        assertEquals("Restaurant not found with  ID: 9999", exception.getMessage());
+            IllegalArgumentException.class,
+            () -> restaurantService.uploadRestaurantImage(9999L, file, testOwner)
+        );
+        
+        assertEquals("Restaurante no encontrado con ID: 9999", exception.getMessage());
     }
 
     @Test

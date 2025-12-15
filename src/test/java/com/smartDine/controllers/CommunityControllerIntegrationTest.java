@@ -166,20 +166,38 @@ public class CommunityControllerIntegrationTest {
     }
 
     @Test
-    public void getCommunityMembers_shouldReturnMembers() {
-        Member member = new Member();
-        member.setId(500L);
-        member.setUser(sampleUser);
-        member.setCommunity(sampleCommunity);
-        member.setMemberRole(MemberRole.PARTICIPANT);
+    public void getCommunityMembers_shouldReturnMembersList() {
+        Member member1 = new Member();
+        member1.setId(1L);
+        member1.setUser(sampleOwner);
+        member1.setCommunity(sampleCommunity);
+        member1.setMemberRole(MemberRole.OWNER);
 
-        when(communityService.getCommunityMembers(100L, sampleUser)).thenReturn(List.of(member));
+        Member member2 = new Member();
+        member2.setId(2L);
+        member2.setUser(sampleUser);
+        member2.setCommunity(sampleCommunity);
+        member2.setMemberRole(MemberRole.PARTICIPANT);
 
-        ResponseEntity<List<MemberDTO>> resp = communityController.getCommunityMembers(100L, sampleUser);
+        when(communityService.getCommunityMembers(100L)).thenReturn(List.of(member1, member2));
+
+        ResponseEntity<List<MemberDTO>> resp = communityController.getCommunityMembers(100L);
 
         assertEquals(HttpStatus.OK, resp.getStatusCode());
         assertNotNull(resp.getBody());
-        assertEquals(1, resp.getBody().size());
-        assertEquals(500L, resp.getBody().get(0).getId());
+        assertEquals(2, resp.getBody().size());
+        assertEquals("OWNER", resp.getBody().get(0).getMemberRole());
+        assertEquals("PARTICIPANT", resp.getBody().get(1).getMemberRole());
+    }
+
+    @Test
+    public void getCommunityMembers_shouldThrowExceptionWhenNotFound() {
+        when(communityService.getCommunityMembers(9999L))
+            .thenThrow(new IllegalArgumentException("Community not found with ID: 9999"));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            communityController.getCommunityMembers(9999L);
+        });
     }
 }
+

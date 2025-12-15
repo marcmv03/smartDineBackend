@@ -1,8 +1,11 @@
 package com.smartDine.services;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -187,5 +190,27 @@ public class MemberServiceTest {
         // Verify deleted
         assertThrows(IllegalArgumentException.class, () -> 
             memberService.getMemberById(memberId));
+    }
+
+    // Tests for getMembersByCommunityId
+    @Test
+    @DisplayName("Should get all members by community ID")
+    void testGetMembersByCommunityId() {
+        // Owner is already a member, join another user
+        Member member = memberService.joinCommunity(publicCommunity.getId(), user);
+        
+        List<Member> members = memberService.getMembersByCommunityId(publicCommunity.getId());
+        
+        // Should have 2 members: owner + user
+        assertEquals(2, members.size());
+        assertTrue(members.stream().anyMatch(m -> m.getUser().getId().equals(owner.getId())));
+        assertTrue(members.stream().anyMatch(m -> m.getUser().getId().equals(user.getId())));
+    }
+
+    @Test
+    @DisplayName("Should fail to get members of non-existent community")
+    void testGetMembersByCommunityIdNotFound() {
+        assertThrows(IllegalArgumentException.class, () -> 
+            memberService.getMembersByCommunityId(99999L));
     }
 }
