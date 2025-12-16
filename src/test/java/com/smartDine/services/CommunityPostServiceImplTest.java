@@ -1,20 +1,20 @@
 package com.smartDine.services;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.authentication.BadCredentialsException;
 
 import com.smartDine.dto.community.post.CreateCommunityPostRequestDTO;
 import com.smartDine.dto.community.post.UpdateCommunityPostRequestDTO;
@@ -24,13 +24,11 @@ import com.smartDine.entity.Customer;
 import com.smartDine.entity.Member;
 import com.smartDine.entity.MemberRole;
 import com.smartDine.entity.community.CommunityPost;
+import com.smartDine.exceptions.NoUserIsMemberException;
 import com.smartDine.repository.CommunityMemberRepository;
 import com.smartDine.repository.CommunityPostRepository;
 import com.smartDine.repository.CommunityRepository;
 import com.smartDine.repository.UserRepository;
-
-import java.util.List;
-import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 public class CommunityPostServiceImplTest {
@@ -111,19 +109,46 @@ public class CommunityPostServiceImplTest {
     }
 
     @Test
+    void createPostShouldThrowNoUserIsMemberExceptionWhenUserNotMember() {
+        CreateCommunityPostRequestDTO requestDTO = new CreateCommunityPostRequestDTO();
+        requestDTO.setCommunityId(community.getId());
+        requestDTO.setTitle("Test");
+        requestDTO.setDescription("Desc");
+
+        when(communityRepository.findById(anyLong())).thenReturn(Optional.of(community));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(otherUser));
+        when(communityMemberRepository.findByUserAndCommunity(otherUser, community)).thenReturn(Optional.empty());
+
+        assertThrows(NoUserIsMemberException.class,
+                () -> communityPostService.createPost(otherUser.getId(), requestDTO));
+    }
+
+    @Test
+    void createPostShouldThrowBadCredentialsWhenUserIsNotAdminOrOwner() {
+        CreateCommunityPostRequestDTO requestDTO = new CreateCommunityPostRequestDTO();
+        requestDTO.setCommunityId(community.getId());
+        requestDTO.setTitle("Test");
+        requestDTO.setDescription("Desc");
+
+        when(communityRepository.findById(anyLong())).thenReturn(Optional.of(community));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(otherUser));
+        when(communityMemberRepository.findByUserAndCommunity(otherUser, community)).thenReturn(Optional.of(participantMember));
+
+        assertThrows(BadCredentialsException.class,
+                () -> communityPostService.createPost(otherUser.getId(), requestDTO));
+    }
+
+    @Test
     void getPostsByCommunityShouldFailForPrivateCommunityIfNotMember() {
         when(communityRepository.findById(community.getId())).thenReturn(Optional.of(community));
-        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
-        when(communityMemberRepository.findByUserAndCommunity(user, community)).thenReturn(Optional.of(adminMember));
-        when(communityPostRepository.findByCommunity(community, Pageable.unpaged()))
-                .thenReturn(new PageImpl<>(List.of()));
+        // Removed unnecessary stubs - userId is null so these mocks are never used
 
         assertThrows(IllegalArgumentException.class, () -> communityPostService
                 .getPostsByCommunity(community.getId(), null, Pageable.unpaged(), null));
     }
 
     @Test
-    void updatePostShouldRejectNonAuthorNonAdmin() {
+    void updatePostShouldThrowBadCredentialsWhenNotAuthorNorAdmin() {
         CommunityPost post = new CommunityPost();
         post.setId(300L);
         post.setCommunity(community);
@@ -138,7 +163,24 @@ public class CommunityPostServiceImplTest {
         UpdateCommunityPostRequestDTO updateDTO = new UpdateCommunityPostRequestDTO();
         updateDTO.setTitle("Updated");
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(BadCredentialsException.class,
                 () -> communityPostService.updatePost(post.getId(), otherUser.getId(), updateDTO));
+    }
+
+    @Test
+    void deletePostShouldThrowBadCredentialsWhenNotAuthorNorAdmin() {
+        CommunityPost post = new CommunityPost();
+        post.setId(400L);
+        post.setCommunity(community);
+        post.setAuthor(adminMember);
+        post.setTitle("Title");
+        post.setDescription("Desc");
+
+        when(communityPostRepository.findById(post.getId())).thenReturn(Optional.of(post));
+        when(userRepository.findById(otherUser.getId())).thenReturn(Optional.of(otherUser));
+        when(communityMemberRepository.findByUserAndCommunity(otherUser, community)).thenReturn(Optional.of(participantMember));
+
+        assertThrows(BadCredentialsException.class,
+                () -> communityPostService.deletePost(post.getId(), otherUser.getId()));
     }
 }

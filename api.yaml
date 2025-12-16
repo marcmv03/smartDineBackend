@@ -862,17 +862,47 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/CommunityPostSummary'
+        '401':
+          description: Unauthorized - authentication required for private communities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Forbidden when trying to access a private community without membership
+          description: Forbidden - access to private community denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Community not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - user is not a member of the private community
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       security:
         - bearerAuth: []
-  /smartdine/api/community/posts:
+  /smartdine/api/communities/{communityId}/posts:
     post:
       tags:
         - Communities
       summary: Create community post
       security:
         - bearerAuth: []
+      parameters:
+        - in: path
+          name: communityId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the community
       requestBody:
         required: true
         content:
@@ -886,9 +916,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommunityPost'
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: User not allowed to create posts
-  /smartdine/api/community/posts/{postId}:
+          description: Forbidden - user is not an administrator or owner of the community
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Community not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - user is not a member of the community
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/communities/posts/{postId}:
     get:
       tags:
         - Communities
@@ -899,6 +951,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: int64
       responses:
         '200':
           description: Post detail
@@ -906,8 +959,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommunityPost'
+        '401':
+          description: Unauthorized - authentication may be required for private communities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - access to private community post denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - user is not a member of the private community
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       security:
         - bearerAuth: []
     put:
@@ -922,6 +997,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: int64
       requestBody:
         required: true
         content:
@@ -935,8 +1011,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommunityPost'
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Not allowed to update
+          description: Forbidden - only post author, administrators or owners can update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - user is not a member of the community
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
         - Communities
@@ -949,12 +1047,35 @@ paths:
           required: true
           schema:
             type: integer
+            format: int64
       responses:
         '204':
-          description: Deleted
+          description: Post deleted successfully
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Not allowed
-  /smartdine/api/community/members/{memberId}/posts:
+          description: Forbidden - only post author, administrators or owners can delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - user is not a member of the community
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /smartdine/api/communities/members/{memberId}/posts:
     get:
       tags:
         - Communities
@@ -965,6 +1086,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: int64
         - in: query
           name: page
           schema:
@@ -988,6 +1110,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/CommunityPostSummary'
+        '401':
+          description: Unauthorized - authentication may be required for private communities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - access to private community posts denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - user is not a member of the private community
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       security:
         - bearerAuth: []
 components:
@@ -1380,24 +1526,51 @@ components:
           type: string
           format: date
     CommunityPost:
-    Member:
       type: object
       properties:
         id:
           type: integer
+          format: int64
         title:
           type: string
+          maxLength: 150
         description:
           type: string
+          maxLength: 2000
         publishedAt:
           type: string
           format: date-time
         communityId:
           type: integer
+          format: int64
         authorId:
           type: integer
+          format: int64
         authorName:
           type: string
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        userName:
+          type: string
+        communityId:
+          type: integer
+          format: int64
+        memberRole:
+          type: string
+          enum:
+            - OWNER
+            - ADMIN
+            - PARTICIPANT
+        joinedAt:
+          type: string
+          format: date-time
     CommunityPostSummary:
       type: object
       properties:
@@ -1430,23 +1603,7 @@ components:
       properties:
         title:
           type: string
+          maxLength: 150
         description:
           type: string
-          format: int64
-        userId:
-          type: integer
-          format: int64
-        userName:
-          type: string
-        communityId:
-          type: integer
-          format: int64
-        memberRole:
-          type: string
-          enum:
-            - OWNER
-            - ADMIN
-            - PARTICIPANT
-        joinedAt:
-          type: string
-          format: date-time
+          maxLength: 2000

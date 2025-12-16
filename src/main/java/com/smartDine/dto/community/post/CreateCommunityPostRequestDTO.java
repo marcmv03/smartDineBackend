@@ -1,11 +1,9 @@
 package com.smartDine.dto.community.post;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public class CreateCommunityPostRequestDTO {
-    @NotNull(message = "Community id is required")
     private Long communityId;
 
     @NotBlank(message = "Title is required")

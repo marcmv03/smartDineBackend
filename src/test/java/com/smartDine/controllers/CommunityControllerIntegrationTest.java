@@ -181,7 +181,7 @@ public class CommunityControllerIntegrationTest {
 
         when(communityService.getCommunityMembers(100L)).thenReturn(List.of(member1, member2));
 
-        ResponseEntity<List<MemberDTO>> resp = communityController.getCommunityMembers(100L);
+        ResponseEntity<List<MemberDTO>> resp = communityController.getCommunityMembers(100L, null);
 
         assertEquals(HttpStatus.OK, resp.getStatusCode());
         assertNotNull(resp.getBody());
@@ -193,10 +193,10 @@ public class CommunityControllerIntegrationTest {
     @Test
     public void getCommunityMembers_shouldThrowExceptionWhenNotFound() {
         when(communityService.getCommunityMembers(9999L))
-            .thenThrow(new IllegalArgumentException("Community not found with ID: 9999"));
+                .thenThrow(new IllegalArgumentException("Community not found"));
 
         assertThrows(IllegalArgumentException.class, () -> {
-            communityController.getCommunityMembers(9999L);
+            communityController.getCommunityMembers(9999L, null);
         });
     }
 }

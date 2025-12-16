@@ -4,10 +4,12 @@ import java.util.Objects;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.smartDine.dto.community.post.CommunityPostResponseDTO;
+import com.smartDine.exceptions.NoUserIsMemberException;
 import com.smartDine.dto.community.post.CommunityPostSummaryDTO;
 import com.smartDine.dto.community.post.CreateCommunityPostRequestDTO;
 import com.smartDine.dto.community.post.UpdateCommunityPostRequestDTO;
@@ -49,7 +51,7 @@ public class CommunityPostServiceImpl implements CommunityPostService {
         Member member = getMemberForCommunity(user, community);
 
         if (!isAdminOrOwner(member)) {
-            throw new IllegalArgumentException("User not authorized to create posts in this community");
+            throw new BadCredentialsException("Only administrators or owners can create posts in this community");
         }
 
         CommunityPost post = communityPostMapper.toEntity(requestDTO, community, member);
@@ -109,7 +111,7 @@ public class CommunityPostServiceImpl implements CommunityPostService {
 
         Member actor = getMemberForCommunity(getUser(currentUserId), post.getCommunity());
         if (!isAdminOrOwner(actor) && !Objects.equals(actor.getUser().getId(), post.getAuthor().getUser().getId())) {
-            throw new IllegalArgumentException("User not authorized to update this post");
+            throw new BadCredentialsException("Only post author, administrators or owners can update this post");
         }
 
         communityPostMapper.updateEntity(post, requestDTO);
@@ -125,7 +127,7 @@ public class CommunityPostServiceImpl implements CommunityPostService {
 
         Member actor = getMemberForCommunity(getUser(currentUserId), post.getCommunity());
         if (!isAdminOrOwner(actor) && !Objects.equals(actor.getUser().getId(), post.getAuthor().getUser().getId())) {
-            throw new IllegalArgumentException("User not authorized to delete this post");
+            throw new BadCredentialsException("Only post author, administrators or owners can delete this post");
         }
 
         communityPostRepository.delete(post);
@@ -143,7 +145,7 @@ public class CommunityPostServiceImpl implements CommunityPostService {
 
     private Member getMemberForCommunity(User user, Community community) {
         return communityMemberRepository.findByUserAndCommunity(user, community)
-                .orElseThrow(() -> new IllegalArgumentException("User is not a member of this community"));
+                .orElseThrow(() -> new NoUserIsMemberException("User is not a member of this community"));
     }
 
     private Community getCommunity(Long communityId) {

@@ -36,15 +36,16 @@ public class CommunityPostsController {
         this.communityPostService = communityPostService;
     }
 
-    @PostMapping("/community/posts")
-    public ResponseEntity<CommunityPostResponseDTO> createPost(
+    @PostMapping("/communities/{id}/posts")
+    public ResponseEntity<CommunityPostResponseDTO> createPost( @PathVariable Long id,
             @Valid @RequestBody CreateCommunityPostRequestDTO requestDTO,
             @AuthenticationPrincipal User user) {
+        requestDTO.setCommunityId(id);
         CommunityPostResponseDTO response = communityPostService.createPost(user.getId(), requestDTO);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/community/posts/{postId}")
+    @GetMapping("/communities/posts/{postId}")
     public ResponseEntity<CommunityPostResponseDTO> getPost(
             @PathVariable Long postId,
             @AuthenticationPrincipal User user) {
@@ -52,7 +53,7 @@ public class CommunityPostsController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/community/members/{memberId}/posts")
+    @GetMapping("/communities/members/{memberId}/posts")
     public ResponseEntity<Page<CommunityPostSummaryDTO>> getPostsByMember(
             @PathVariable Long memberId,
             @RequestParam(defaultValue = "0") int page,
@@ -65,7 +66,7 @@ public class CommunityPostsController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/community/posts/{postId}")
+    @PutMapping("communities/posts/{postId}")
     public ResponseEntity<CommunityPostResponseDTO> updatePost(
             @PathVariable Long postId,
             @Valid @RequestBody UpdateCommunityPostRequestDTO requestDTO,
@@ -74,7 +75,7 @@ public class CommunityPostsController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/community/posts/{postId}")
+    @DeleteMapping("communities/posts/{postId}")
     public ResponseEntity<Void> deletePost(
             @PathVariable Long postId,
             @AuthenticationPrincipal User user) {
