@@ -42,17 +42,14 @@ services:
       # Mount Let's Encrypt certificates from host
       - /etc/letsencrypt:/etc/letsencrypt:ro
     environment:
-      SPRING_APPLICATION_NAME: ${SPRING_APPLICATION_NAME:-smartDine}
+      # Override datasource URL for Docker network (postgres hostname instead of localhost)
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/smartDine
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-mV00R152}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
-      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL:-"true"}
-      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:-org.hibernate.dialect.PostgreSQLDialect}
-      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: ${SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL:-"true"}
-      SECURITY_JWT_SECRET_KEY: ${SECURITY_JWT_SECRET_KEY:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-      SECURITY_JWT_EXPIRATION_TIME: ${SECURITY_JWT_EXPIRATION_TIME:-3600000}
-      SSL_KEY_STORE_PASSWORD: ${SSL_KEY_STORE_PASSWORD:-mV00R152}
+      # SSL Configuration for production
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: /etc/letsencrypt/live/smartdine-service.switzerlandnorth.cloudapp.azure.com/keystore.p12
+      SERVER_SSL_KEY_STORE_TYPE: PKCS12
+      SERVER_SSL_KEY_ALIAS: springboot
+      # All other variables are loaded from .env file
     depends_on:
       postgres:
         condition: service_healthy
