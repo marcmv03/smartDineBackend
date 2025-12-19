@@ -1,5 +1,6 @@
 package com.smartDine.controllers;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -29,10 +30,13 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import com.smartDine.dto.community.post.CommunityPostResponseDTO;
-import com.smartDine.dto.community.post.CommunityPostSummaryDTO;
+import com.smartDine.entity.Community;
+import com.smartDine.entity.CommunityType;
 import com.smartDine.entity.Customer;
+import com.smartDine.entity.Member;
+import com.smartDine.entity.MemberRole;
 import com.smartDine.entity.User;
+import com.smartDine.entity.community.CommunityPost;
 import com.smartDine.services.CommunityPostService;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +50,8 @@ public class CommunityPostsControllerTest {
 
     private MockMvc mockMvc;
     private Customer user;
+    private Community community;
+    private Member member;
 
     @BeforeEach
     void setup() {
@@ -55,6 +61,19 @@ public class CommunityPostsControllerTest {
         user.setEmail("tester@example.com");
         user.setPassword("pass");
         user.setPhoneNumber(123L);
+
+        community = new Community();
+        community.setId(1L);
+        community.setName("Test Community");
+        community.setDescription("A test community");
+        community.setVisibility(true);
+        community.setCommunityType(CommunityType.USER);
+
+        member = new Member();
+        member.setId(10L);
+        member.setUser(user);
+        member.setCommunity(community);
+        member.setMemberRole(MemberRole.ADMIN);
 
         // Custom argument resolver that returns our test user for @AuthenticationPrincipal
         HandlerMethodArgumentResolver customResolver = new HandlerMethodArgumentResolver() {
@@ -76,12 +95,21 @@ public class CommunityPostsControllerTest {
                 .build();
     }
 
+    private CommunityPost createTestPost(Long id, String title, String description) {
+        CommunityPost post = new CommunityPost();
+        post.setId(id);
+        post.setTitle(title);
+        post.setDescription(description);
+        post.setCommunity(community);
+        post.setAuthor(member);
+        post.setPublishedAt(LocalDateTime.now());
+        return post;
+    }
+
     @Test
     void createPostShouldReturnOk() throws Exception {
-        CommunityPostResponseDTO responseDTO = new CommunityPostResponseDTO();
-        responseDTO.setId(1L);
-        responseDTO.setTitle("Title");
-        when(communityPostService.createPost(anyLong(), any())).thenReturn(responseDTO);
+        CommunityPost post = createTestPost(1L, "Title", "Body");
+        when(communityPostService.createPost(anyLong(), any())).thenReturn(post);
 
         mockMvc.perform(post("/smartdine/api/communities/1/posts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -93,13 +121,12 @@ public class CommunityPostsControllerTest {
 
     @Test
     void getPostsByMemberShouldReturnOk() throws Exception {
-        CommunityPostSummaryDTO summary = new CommunityPostSummaryDTO();
-        summary.setId(2L);
+        CommunityPost post = createTestPost(2L, "Test Post", "Test Description");
         
         // Create a proper PageImpl with Pageable to avoid serialization issues
         Pageable pageable = PageRequest.of(0, 5);
         when(communityPostService.getPostsByMember(anyLong(), any(), any(Pageable.class), any()))
-                .thenReturn(new PageImpl<>(List.of(summary), pageable, 1));
+                .thenReturn(new PageImpl<>(List.of(post), pageable, 1));
 
         mockMvc.perform(get("/smartdine/api/communities/members/3/posts")
                         .param("page", "0")

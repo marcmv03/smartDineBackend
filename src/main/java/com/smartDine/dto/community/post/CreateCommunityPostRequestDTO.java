@@ -1,5 +1,9 @@
 package com.smartDine.dto.community.post;
 
+import com.smartDine.entity.Community;
+import com.smartDine.entity.Member;
+import com.smartDine.entity.community.CommunityPost;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -36,5 +40,14 @@ public class CreateCommunityPostRequestDTO {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public static CommunityPost toEntity(CreateCommunityPostRequestDTO dto, Community community, Member author) {
+        CommunityPost post = new CommunityPost();
+        post.setTitle(dto.getTitle());
+        post.setDescription(dto.getDescription());
+        post.setCommunity(community);
+        post.setAuthor(author);
+        return post;
     }
 }

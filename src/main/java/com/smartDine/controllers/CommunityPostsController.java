@@ -21,6 +21,7 @@ import com.smartDine.dto.community.post.CommunityPostSummaryDTO;
 import com.smartDine.dto.community.post.CreateCommunityPostRequestDTO;
 import com.smartDine.dto.community.post.UpdateCommunityPostRequestDTO;
 import com.smartDine.entity.User;
+import com.smartDine.entity.community.CommunityPost;
 import com.smartDine.services.CommunityPostService;
 
 import jakarta.validation.Valid;
@@ -37,20 +38,33 @@ public class CommunityPostsController {
     }
 
     @PostMapping("/communities/{id}/posts")
-    public ResponseEntity<CommunityPostResponseDTO> createPost( @PathVariable Long id,
+    public ResponseEntity<CommunityPostResponseDTO> createPost(@PathVariable Long id,
             @Valid @RequestBody CreateCommunityPostRequestDTO requestDTO,
             @AuthenticationPrincipal User user) {
         requestDTO.setCommunityId(id);
-        CommunityPostResponseDTO response = communityPostService.createPost(user.getId(), requestDTO);
-        return ResponseEntity.ok(response);
+        CommunityPost post = communityPostService.createPost(user.getId(), requestDTO);
+        return ResponseEntity.ok(CommunityPostResponseDTO.fromEntity(post));
+    }
+
+    @GetMapping("/communities/{communityId}/posts")
+    public ResponseEntity<Page<CommunityPostSummaryDTO>> getPostsByCommunity(
+            @PathVariable Long communityId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @AuthenticationPrincipal User user) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<CommunityPost> posts = communityPostService.getPostsByCommunity(communityId, search, pageable,
+                user != null ? user.getId() : null);
+        return ResponseEntity.ok(CommunityPostSummaryDTO.fromEntity(posts));
     }
 
     @GetMapping("/communities/posts/{postId}")
     public ResponseEntity<CommunityPostResponseDTO> getPost(
             @PathVariable Long postId,
             @AuthenticationPrincipal User user) {
-        CommunityPostResponseDTO response = communityPostService.getPostById(postId, user != null ? user.getId() : null);
-        return ResponseEntity.ok(response);
+        CommunityPost post = communityPostService.getPostById(postId, user != null ? user.getId() : null);
+        return ResponseEntity.ok(CommunityPostResponseDTO.fromEntity(post));
     }
 
     @GetMapping("/communities/members/{memberId}/posts")
@@ -61,21 +75,21 @@ public class CommunityPostsController {
             @RequestParam(required = false) String search,
             @AuthenticationPrincipal User user) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<CommunityPostSummaryDTO> response = communityPostService.getPostsByMember(memberId, search, pageable,
+        Page<CommunityPost> posts = communityPostService.getPostsByMember(memberId, search, pageable,
                 user != null ? user.getId() : null);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(CommunityPostSummaryDTO.fromEntity(posts));
     }
 
-    @PutMapping("communities/posts/{postId}")
+    @PutMapping("/communities/posts/{postId}")
     public ResponseEntity<CommunityPostResponseDTO> updatePost(
             @PathVariable Long postId,
             @Valid @RequestBody UpdateCommunityPostRequestDTO requestDTO,
             @AuthenticationPrincipal User user) {
-        CommunityPostResponseDTO response = communityPostService.updatePost(postId, user.getId(), requestDTO);
-        return ResponseEntity.ok(response);
+        CommunityPost post = communityPostService.updatePost(postId, user.getId(), requestDTO);
+        return ResponseEntity.ok(CommunityPostResponseDTO.fromEntity(post));
     }
 
-    @DeleteMapping("communities/posts/{postId}")
+    @DeleteMapping("/communities/posts/{postId}")
     public ResponseEntity<Void> deletePost(
             @PathVariable Long postId,
             @AuthenticationPrincipal User user) {

@@ -8,9 +8,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.smartDine.dto.community.post.CommunityPostResponseDTO;
-import com.smartDine.exceptions.NoUserIsMemberException;
-import com.smartDine.dto.community.post.CommunityPostSummaryDTO;
 import com.smartDine.dto.community.post.CreateCommunityPostRequestDTO;
 import com.smartDine.dto.community.post.UpdateCommunityPostRequestDTO;
 import com.smartDine.entity.Community;
@@ -18,7 +15,7 @@ import com.smartDine.entity.Member;
 import com.smartDine.entity.MemberRole;
 import com.smartDine.entity.User;
 import com.smartDine.entity.community.CommunityPost;
-import com.smartDine.mappers.community.post.CommunityPostMapper;
+import com.smartDine.exceptions.NoUserIsMemberException;
 import com.smartDine.repository.CommunityMemberRepository;
 import com.smartDine.repository.CommunityPostRepository;
 import com.smartDine.repository.CommunityRepository;
@@ -31,7 +28,6 @@ public class CommunityPostServiceImpl implements CommunityPostService {
     private final CommunityMemberRepository communityMemberRepository;
     private final CommunityRepository communityRepository;
     private final UserRepository userRepository;
-    private final CommunityPostMapper communityPostMapper = new CommunityPostMapper();
 
     public CommunityPostServiceImpl(CommunityPostRepository communityPostRepository,
             CommunityMemberRepository communityMemberRepository,
@@ -45,7 +41,7 @@ public class CommunityPostServiceImpl implements CommunityPostService {
 
     @Override
     @Transactional
-    public CommunityPostResponseDTO createPost(Long currentUserId, CreateCommunityPostRequestDTO requestDTO) {
+    public CommunityPost createPost(Long currentUserId, CreateCommunityPostRequestDTO requestDTO) {
         Community community = getCommunity(requestDTO.getCommunityId());
         User user = getUser(currentUserId);
         Member member = getMemberForCommunity(user, community);
@@ -54,57 +50,53 @@ public class CommunityPostServiceImpl implements CommunityPostService {
             throw new BadCredentialsException("Only administrators or owners can create posts in this community");
         }
 
-        CommunityPost post = communityPostMapper.toEntity(requestDTO, community, member);
-        CommunityPost saved = communityPostRepository.save(post);
-        return communityPostMapper.toResponseDTO(saved);
+        CommunityPost post = CreateCommunityPostRequestDTO.toEntity(requestDTO, community, member);
+        return communityPostRepository.save(post);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public CommunityPostResponseDTO getPostById(Long postId, Long currentUserId) {
+    public CommunityPost getPostById(Long postId, Long currentUserId) {
         CommunityPost post = communityPostRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("Post not found with id: " + postId));
 
         validateReadAccess(post.getCommunity(), currentUserId);
-        return communityPostMapper.toResponseDTO(post);
+        return post;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CommunityPostSummaryDTO> getPostsByMember(Long memberId, String search, Pageable pageable,
+    public Page<CommunityPost> getPostsByMember(Long memberId, String search, Pageable pageable,
             Long currentUserId) {
         Member author = communityMemberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found with id: " + memberId));
 
         validateReadAccess(author.getCommunity(), currentUserId);
 
-        Page<CommunityPost> posts;
         if (search != null && !search.isBlank()) {
-            posts = communityPostRepository.searchByAuthor(author, search, pageable);
+            return communityPostRepository.searchByAuthor(author, search, pageable);
         } else {
-            posts = communityPostRepository.findByAuthor(author, pageable);
+            return communityPostRepository.findByAuthor(author, pageable);
         }
-        return posts.map(communityPostMapper::toSummaryDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CommunityPostSummaryDTO> getPostsByCommunity(Long communityId, String search, Pageable pageable,
+    public Page<CommunityPost> getPostsByCommunity(Long communityId, String search, Pageable pageable,
             Long currentUserId) {
         Community community = getCommunity(communityId);
         validateReadAccess(community, currentUserId);
-        Page<CommunityPost> posts;
+
         if (search != null && !search.isBlank()) {
-            posts = communityPostRepository.searchByCommunity(community, search, pageable);
+            return communityPostRepository.searchByCommunity(community, search, pageable);
         } else {
-            posts = communityPostRepository.findByCommunity(community, pageable);
+            return communityPostRepository.findByCommunity(community, pageable);
         }
-        return posts.map(communityPostMapper::toSummaryDTO);
     }
 
     @Override
     @Transactional
-    public CommunityPostResponseDTO updatePost(Long postId, Long currentUserId,
+    public CommunityPost updatePost(Long postId, Long currentUserId,
             UpdateCommunityPostRequestDTO requestDTO) {
         CommunityPost post = communityPostRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("Post not found with id: " + postId));
@@ -114,9 +106,14 @@ public class CommunityPostServiceImpl implements CommunityPostService {
             throw new BadCredentialsException("Only post author, administrators or owners can update this post");
         }
 
-        communityPostMapper.updateEntity(post, requestDTO);
-        CommunityPost saved = communityPostRepository.save(post);
-        return communityPostMapper.toResponseDTO(saved);
+        if (requestDTO.getTitle() != null) {
+            post.setTitle(requestDTO.getTitle());
+        }
+        if (requestDTO.getDescription() != null) {
+            post.setDescription(requestDTO.getDescription());
+        }
+
+        return communityPostRepository.save(post);
     }
 
     @Override
