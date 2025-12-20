@@ -46,13 +46,13 @@ public class CommunityPostsController {
     }
 
     @GetMapping("/communities/{communityId}/posts")
-    public ResponseEntity<List<CommunityPostSummaryDTO>> getPostsByCommunity(
+    public ResponseEntity<List<CommunityPostResponseDTO>> getPostsByCommunity(
             @PathVariable Long communityId,
             @RequestParam(required = false) String search,
             @AuthenticationPrincipal User user) {
         List<CommunityPost> posts = communityPostService.getPostsByCommunity(communityId, search,
                 user != null ? user.getId() : null);
-        return ResponseEntity.ok(CommunityPostSummaryDTO.fromEntity(posts));
+        return ResponseEntity.ok(CommunityPostResponseDTO.fromEntity(posts));
     }
 
     @GetMapping("/communities/posts/{postId}")
