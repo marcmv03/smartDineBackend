@@ -3,8 +3,6 @@ package com.smartDine.dto.community.post;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.data.domain.Page;
-
 import com.smartDine.entity.community.CommunityPost;
 
 public class CommunityPostSummaryDTO extends CommunityPostBaseDTO {
@@ -27,9 +25,5 @@ public class CommunityPostSummaryDTO extends CommunityPostBaseDTO {
         return posts.stream()
             .map(CommunityPostSummaryDTO::fromEntity)
             .collect(Collectors.toList());
-    }
-
-    public static Page<CommunityPostSummaryDTO> fromEntity(Page<CommunityPost> posts) {
-        return posts.map(CommunityPostSummaryDTO::fromEntity);
     }
 }

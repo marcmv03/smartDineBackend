@@ -14,9 +14,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
@@ -123,17 +120,13 @@ public class CommunityPostsControllerTest {
     void getPostsByMemberShouldReturnOk() throws Exception {
         CommunityPost post = createTestPost(2L, "Test Post", "Test Description");
         
-        // Create a proper PageImpl with Pageable to avoid serialization issues
-        Pageable pageable = PageRequest.of(0, 5);
-        when(communityPostService.getPostsByMember(anyLong(), any(), any(Pageable.class), any()))
-                .thenReturn(new PageImpl<>(List.of(post), pageable, 1));
+        when(communityPostService.getPostsByMember(anyLong(), any(), any()))
+                .thenReturn(List.of(post));
 
-        mockMvc.perform(get("/smartdine/api/communities/members/3/posts")
-                        .param("page", "0")
-                        .param("size", "5"))
+        mockMvc.perform(get("/smartdine/api/communities/members/3/posts"))
                 .andExpect(status().isOk());
 
-        verify(communityPostService).getPostsByMember(anyLong(), any(), any(Pageable.class), any());
+        verify(communityPostService).getPostsByMember(anyLong(), any(), any());
     }
 
     @Test

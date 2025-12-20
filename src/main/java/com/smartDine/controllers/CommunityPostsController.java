@@ -1,8 +1,7 @@
 package com.smartDine.controllers;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -47,14 +46,11 @@ public class CommunityPostsController {
     }
 
     @GetMapping("/communities/{communityId}/posts")
-    public ResponseEntity<Page<CommunityPostSummaryDTO>> getPostsByCommunity(
+    public ResponseEntity<List<CommunityPostSummaryDTO>> getPostsByCommunity(
             @PathVariable Long communityId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
             @AuthenticationPrincipal User user) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<CommunityPost> posts = communityPostService.getPostsByCommunity(communityId, search, pageable,
+        List<CommunityPost> posts = communityPostService.getPostsByCommunity(communityId, search,
                 user != null ? user.getId() : null);
         return ResponseEntity.ok(CommunityPostSummaryDTO.fromEntity(posts));
     }
@@ -68,14 +64,11 @@ public class CommunityPostsController {
     }
 
     @GetMapping("/communities/members/{memberId}/posts")
-    public ResponseEntity<Page<CommunityPostSummaryDTO>> getPostsByMember(
+    public ResponseEntity<List<CommunityPostSummaryDTO>> getPostsByMember(
             @PathVariable Long memberId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
             @AuthenticationPrincipal User user) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<CommunityPost> posts = communityPostService.getPostsByMember(memberId, search, pageable,
+        List<CommunityPost> posts = communityPostService.getPostsByMember(memberId, search,
                 user != null ? user.getId() : null);
         return ResponseEntity.ok(CommunityPostSummaryDTO.fromEntity(posts));
     }

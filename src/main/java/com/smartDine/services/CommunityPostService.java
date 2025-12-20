@@ -1,7 +1,6 @@
 package com.smartDine.services;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import java.util.List;
 
 import com.smartDine.dto.community.post.CreateCommunityPostRequestDTO;
 import com.smartDine.dto.community.post.UpdateCommunityPostRequestDTO;
@@ -12,9 +11,9 @@ public interface CommunityPostService {
 
     CommunityPost getPostById(Long postId, Long currentUserId);
 
-    Page<CommunityPost> getPostsByMember(Long memberId, String search, Pageable pageable, Long currentUserId);
+    List<CommunityPost> getPostsByMember(Long memberId, String search, Long currentUserId);
 
-    Page<CommunityPost> getPostsByCommunity(Long communityId, String search, Pageable pageable, Long currentUserId);
+    List<CommunityPost> getPostsByCommunity(Long communityId, String search, Long currentUserId);
 
     CommunityPost updatePost(Long postId, Long currentUserId, UpdateCommunityPostRequestDTO requestDTO);
 

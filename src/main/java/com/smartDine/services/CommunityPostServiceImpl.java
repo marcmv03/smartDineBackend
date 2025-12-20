@@ -1,9 +1,8 @@
 package com.smartDine.services;
 
+import java.util.List;
 import java.util.Objects;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,7 +65,7 @@ public class CommunityPostServiceImpl implements CommunityPostService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CommunityPost> getPostsByMember(Long memberId, String search, Pageable pageable,
+    public List<CommunityPost> getPostsByMember(Long memberId, String search,
             Long currentUserId) {
         Member author = communityMemberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found with id: " + memberId));
@@ -74,23 +73,23 @@ public class CommunityPostServiceImpl implements CommunityPostService {
         validateReadAccess(author.getCommunity(), currentUserId);
 
         if (search != null && !search.isBlank()) {
-            return communityPostRepository.searchByAuthor(author, search, pageable);
+            return communityPostRepository.searchByAuthor(author, search);
         } else {
-            return communityPostRepository.findByAuthor(author, pageable);
+            return communityPostRepository.findByAuthor(author);
         }
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CommunityPost> getPostsByCommunity(Long communityId, String search, Pageable pageable,
+    public List<CommunityPost> getPostsByCommunity(Long communityId, String search,
             Long currentUserId) {
         Community community = getCommunity(communityId);
         validateReadAccess(community, currentUserId);
 
         if (search != null && !search.isBlank()) {
-            return communityPostRepository.searchByCommunity(community, search, pageable);
+            return communityPostRepository.searchByCommunity(community, search);
         } else {
-            return communityPostRepository.findByCommunity(community, pageable);
+            return communityPostRepository.findByCommunity(community);
         }
     }
 

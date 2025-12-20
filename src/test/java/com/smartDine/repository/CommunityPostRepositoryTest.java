@@ -1,12 +1,10 @@
 package com.smartDine.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.data.domain.PageRequest;
 
 import com.smartDine.entity.Community;
 import com.smartDine.entity.CommunityType;
@@ -72,14 +70,14 @@ public class CommunityPostRepositoryTest {
 
     @Test
     void searchByCommunityShouldFilterByText() {
-        var results = communityPostRepository.searchByCommunity(community, "spring", PageRequest.of(0, 10));
-        assertEquals(1, results.getTotalElements());
-        assertEquals("First title", results.getContent().get(0).getTitle());
+        var results = communityPostRepository.searchByCommunity(community, "spring");
+        assertEquals(1, results.size());
+        assertEquals("First title", results.get(0).getTitle());
     }
 
     @Test
     void findByAuthorReturnsAllPosts() {
-        var results = communityPostRepository.findByAuthor(member, PageRequest.of(0, 10));
-        assertEquals(2, results.getTotalElements());
+        var results = communityPostRepository.findByAuthor(member);
+        assertEquals(2, results.size());
     }
 }

@@ -13,7 +13,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.BadCredentialsException;
 
 import com.smartDine.dto.community.post.CreateCommunityPostRequestDTO;
@@ -144,7 +143,7 @@ public class CommunityPostServiceImplTest {
         // Removed unnecessary stubs - userId is null so these mocks are never used
 
         assertThrows(IllegalArgumentException.class, () -> communityPostService
-                .getPostsByCommunity(community.getId(), null, Pageable.unpaged(), null));
+                .getPostsByCommunity(community.getId(), null, null));
     }
 
     @Test
