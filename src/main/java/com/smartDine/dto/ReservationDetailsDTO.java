@@ -3,6 +3,7 @@ package com.smartDine.dto;
 import java.util.List;
 
 import com.smartDine.entity.Reservation;
+import com.smartDine.entity.ReservationStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,6 +21,7 @@ public class ReservationDetailsDTO {
     private Double endTime;
     private int numberOfGuests;
     private String address ;
+    private ReservationStatus status ;
 public static ReservationDetailsDTO fromEntity(Reservation reservation) {
     return new ReservationDetailsDTO(
         reservation.getId(),
@@ -30,6 +32,7 @@ public static ReservationDetailsDTO fromEntity(Reservation reservation) {
         reservation.getTimeSlot().getEndTime(),
         reservation.getNumGuests(),
         reservation.getRestaurant().getAddress()
+        ,reservation.getStatus()
     );
 }
 public static List<ReservationDetailsDTO> fromEntity(List<Reservation> reservations) {
