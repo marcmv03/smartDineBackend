@@ -12,15 +12,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.smartDine.dto.ReservationDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
+import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
+import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.repository.BusinessRepository;
 import com.smartDine.repository.CustomerRepository;
 import com.smartDine.repository.RestaurantRepository;
@@ -174,6 +177,189 @@ class ReservationServiceTest {
         );
 
         assertEquals("You are not the owner of this restaurant", exception.getMessage());
+    }
+
+    // ==================== changeReservationStatus Tests ====================
+
+    @Test
+    @DisplayName("Should allow customer to cancel their own reservation")
+    void changeReservationStatus_CustomerCancelsOwnReservation_Success() {
+        Business owner = createBusiness("OwnerCancel1", "ownercancel1@smartdine.com", 100000001L);
+        Restaurant restaurant = createRestaurant(owner, "Cancel Restaurant 1");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 1, 4);
+        Customer customer = createCustomer("CancelCustomer1", "cancelcustomer1@smartdine.com", 200000001L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(1));
+
+        Reservation reservation = reservationService.createReservation(dto, customer);
+        assertEquals(ReservationStatus.CONFIRMED, reservation.getStatus());
+
+        Reservation updated = reservationService.changeReservationStatus(
+            reservation.getId(), ReservationStatus.CANCELLED, customer
+        );
+
+        assertEquals(ReservationStatus.CANCELLED, updated.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should allow business owner to cancel a reservation")
+    void changeReservationStatus_BusinessCancelsReservation_Success() {
+        Business owner = createBusiness("OwnerCancel2", "ownercancel2@smartdine.com", 100000002L);
+        Restaurant restaurant = createRestaurant(owner, "Cancel Restaurant 2");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.TUESDAY, 18.0, 20.0);
+        RestaurantTable table = createTable(restaurant, 2, 4);
+        Customer customer = createCustomer("CancelCustomer2", "cancelcustomer2@smartdine.com", 200000002L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(3);
+        dto.setDate(LocalDate.now().plusDays(2));
+
+        Reservation reservation = reservationService.createReservation(dto, customer);
+
+        Reservation updated = reservationService.changeReservationStatus(
+            reservation.getId(), ReservationStatus.CANCELLED, owner
+        );
+
+        assertEquals(ReservationStatus.CANCELLED, updated.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should allow business owner to complete a reservation")
+    void changeReservationStatus_BusinessCompletesReservation_Success() {
+        Business owner = createBusiness("OwnerComplete", "ownercomplete@smartdine.com", 100000003L);
+        Restaurant restaurant = createRestaurant(owner, "Complete Restaurant");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.WEDNESDAY, 19.0, 21.0);
+        RestaurantTable table = createTable(restaurant, 3, 6);
+        Customer customer = createCustomer("CompleteCustomer", "completecustomer@smartdine.com", 200000003L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(4);
+        dto.setDate(LocalDate.now().plusDays(3));
+
+        Reservation reservation = reservationService.createReservation(dto, customer);
+
+        Reservation updated = reservationService.changeReservationStatus(
+            reservation.getId(), ReservationStatus.COMPLETED, owner
+        );
+
+        assertEquals(ReservationStatus.COMPLETED, updated.getStatus());
+    }
+
+    @Test
+    @DisplayName("Should reject customer trying to complete a reservation")
+    void changeReservationStatus_CustomerTriesToComplete_ThrowsIllegalStateChange() {
+        Business owner = createBusiness("OwnerReject1", "ownerreject1@smartdine.com", 100000004L);
+        Restaurant restaurant = createRestaurant(owner, "Reject Restaurant 1");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.THURSDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 4, 2);
+        Customer customer = createCustomer("RejectCustomer1", "rejectcustomer1@smartdine.com", 200000004L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(4));
+
+        Reservation reservation = reservationService.createReservation(dto, customer);
+
+        IllegalReservationStateChangeException exception = assertThrows(
+            IllegalReservationStateChangeException.class,
+            () -> reservationService.changeReservationStatus(
+                reservation.getId(), ReservationStatus.COMPLETED, customer
+            )
+        );
+
+        assertEquals("Only the restaurant owner can mark a reservation as completed", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should reject invalid status transition from CANCELLED")
+    void changeReservationStatus_FromCancelled_ThrowsIllegalStateChange() {
+        Business owner = createBusiness("OwnerInvalid1", "ownerinvalid1@smartdine.com", 100000005L);
+        Restaurant restaurant = createRestaurant(owner, "Invalid Restaurant 1");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.FRIDAY, 20.0, 22.0);
+        RestaurantTable table = createTable(restaurant, 5, 4);
+        Customer customer = createCustomer("InvalidCustomer1", "invalidcustomer1@smartdine.com", 200000005L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(5));
+
+        Reservation reservation = reservationService.createReservation(dto, customer);
+        
+        // First cancel the reservation
+        reservationService.changeReservationStatus(reservation.getId(), ReservationStatus.CANCELLED, customer);
+
+        // Then try to complete it (should fail)
+        IllegalReservationStateChangeException exception = assertThrows(
+            IllegalReservationStateChangeException.class,
+            () -> reservationService.changeReservationStatus(
+                reservation.getId(), ReservationStatus.COMPLETED, owner
+            )
+        );
+
+        assertEquals("Cannot change status: reservation is already CANCELLED", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should reject unauthorized user trying to change status")
+    void changeReservationStatus_UnauthorizedUser_ThrowsBadCredentials() {
+        Business owner = createBusiness("OwnerAuth1", "ownerauth1@smartdine.com", 100000006L);
+        Business otherBusiness = createBusiness("OtherBusiness", "otherbusiness@smartdine.com", 100000007L);
+        Restaurant restaurant = createRestaurant(owner, "Auth Restaurant 1");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.SATURDAY, 13.0, 15.0);
+        RestaurantTable table = createTable(restaurant, 6, 4);
+        Customer customer = createCustomer("AuthCustomer1", "authcustomer1@smartdine.com", 200000006L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(6));
+
+        Reservation reservation = reservationService.createReservation(dto, customer);
+
+        // Another business (not the owner) tries to cancel
+        BadCredentialsException exception = assertThrows(
+            BadCredentialsException.class,
+            () -> reservationService.changeReservationStatus(
+                reservation.getId(), ReservationStatus.CANCELLED, otherBusiness
+            )
+        );
+
+        assertEquals("You are not authorized to change this reservation's status", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when reservation not found")
+    void changeReservationStatus_ReservationNotFound_ThrowsIllegalArgument() {
+        Customer customer = createCustomer("NotFoundCustomer", "notfoundcustomer@smartdine.com", 200000007L);
+
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> reservationService.changeReservationStatus(
+                99999L, ReservationStatus.CANCELLED, customer
+            )
+        );
+
+        assertEquals("Reservation not found with id: 99999", exception.getMessage());
     }
 
     private Business createBusiness(String name, String email, Long phoneNumber) {

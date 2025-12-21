@@ -10,6 +10,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.smartDine.dto.ReservationDTO;
 import com.smartDine.dto.ReservationDetailsDTO;
 import com.smartDine.dto.RestaurantReservationDTO;
+import com.smartDine.dto.UpdateReservationStatusDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
@@ -59,6 +61,22 @@ public class ReservationController {
         Reservation created = reservationService.createReservation(reservationDTO, customer);
         ReservationDTO response = ReservationDTO.fromEntity(created);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PatchMapping("/reservations/{reservationId}")
+    public ResponseEntity<ReservationDTO> updateReservationStatus(
+        @PathVariable Long reservationId,
+        @Valid @RequestBody UpdateReservationStatusDTO dto,
+        @AuthenticationPrincipal User user
+    ) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Reservation updated = reservationService.changeReservationStatus(
+            reservationId, dto.getStatus(), user
+        );
+        return ResponseEntity.ok(ReservationDTO.fromEntity(updated));
     }
 
     @GetMapping("/me/reservations")

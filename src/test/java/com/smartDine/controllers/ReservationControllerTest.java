@@ -23,12 +23,15 @@ import org.springframework.security.authentication.BadCredentialsException;
 import com.smartDine.dto.ReservationDTO;
 import com.smartDine.dto.ReservationDetailsDTO;
 import com.smartDine.dto.RestaurantReservationDTO;
+import com.smartDine.dto.UpdateReservationStatusDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
+import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
+import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.services.CustomerService;
 import com.smartDine.services.ReservationService;
 
@@ -190,5 +193,80 @@ class ReservationControllerTest {
         ResponseEntity<List<RestaurantReservationDTO>> response = 
             reservationController.getRestaurantReservations(10L, reservationDate, null);
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    // ==================== updateReservationStatus Tests ====================
+
+    @Test
+    void updateReservationStatus_CustomerCancels_ReturnsOk() {
+        UpdateReservationStatusDTO dto = new UpdateReservationStatusDTO(ReservationStatus.CANCELLED);
+        
+        Reservation cancelledReservation = new Reservation();
+        cancelledReservation.setId(40L);
+        cancelledReservation.setCustomer(customer);
+        cancelledReservation.setRestaurant(reservation.getRestaurant());
+        cancelledReservation.setTimeSlot(reservation.getTimeSlot());
+        cancelledReservation.setRestaurantTable(reservation.getRestaurantTable());
+        cancelledReservation.setNumGuests(2);
+        cancelledReservation.setDate(reservationDate);
+        cancelledReservation.setStatus(ReservationStatus.CANCELLED);
+
+        when(reservationService.changeReservationStatus(eq(40L), eq(ReservationStatus.CANCELLED), eq(customer)))
+            .thenReturn(cancelledReservation);
+
+        ResponseEntity<ReservationDTO> response = reservationController.updateReservationStatus(40L, dto, customer);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(40L, response.getBody().getId());
+    }
+
+    @Test
+    void updateReservationStatus_BusinessCompletes_ReturnsOk() {
+        Business businessUser = new Business();
+        businessUser.setId(5L);
+        businessUser.setName("Business Owner");
+
+        UpdateReservationStatusDTO dto = new UpdateReservationStatusDTO(ReservationStatus.COMPLETED);
+        
+        Reservation completedReservation = new Reservation();
+        completedReservation.setId(40L);
+        completedReservation.setCustomer(customer);
+        completedReservation.setRestaurant(reservation.getRestaurant());
+        completedReservation.setTimeSlot(reservation.getTimeSlot());
+        completedReservation.setRestaurantTable(reservation.getRestaurantTable());
+        completedReservation.setNumGuests(2);
+        completedReservation.setDate(reservationDate);
+        completedReservation.setStatus(ReservationStatus.COMPLETED);
+
+        when(reservationService.changeReservationStatus(eq(40L), eq(ReservationStatus.COMPLETED), eq(businessUser)))
+            .thenReturn(completedReservation);
+
+        ResponseEntity<ReservationDTO> response = reservationController.updateReservationStatus(40L, dto, businessUser);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(40L, response.getBody().getId());
+    }
+
+    @Test
+    void updateReservationStatus_NullUser_ReturnsUnauthorized() {
+        UpdateReservationStatusDTO dto = new UpdateReservationStatusDTO(ReservationStatus.CANCELLED);
+
+        ResponseEntity<ReservationDTO> response = reservationController.updateReservationStatus(40L, dto, null);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    @Test
+    void updateReservationStatus_IllegalStateChange_ThrowsException() {
+        UpdateReservationStatusDTO dto = new UpdateReservationStatusDTO(ReservationStatus.COMPLETED);
+
+        when(reservationService.changeReservationStatus(eq(40L), eq(ReservationStatus.COMPLETED), eq(customer)))
+            .thenThrow(new IllegalReservationStateChangeException("Only the restaurant owner can mark a reservation as completed"));
+
+        assertThrows(IllegalReservationStateChangeException.class, () ->
+            reservationController.updateReservationStatus(40L, dto, customer)
+        );
     }
 }

@@ -20,6 +20,7 @@ import com.smartDine.dto.ErrorDTO;
 import com.smartDine.dto.QueryParameterErrorDTO;
 import com.smartDine.dto.ValidationErrorDTO;
 import com.smartDine.exceptions.DuplicateUserException;
+import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.exceptions.MissingQueryParamException;
 import com.smartDine.exceptions.NoUserIsMemberException;
 import com.smartDine.exceptions.RelatedEntityException;
@@ -192,6 +193,18 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(NoUserIsMemberException.class)
     public ResponseEntity<ErrorDTO> handleNoUserIsMemberException(NoUserIsMemberException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.CONFLICT.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Handle illegal reservation state change (409 Conflict)
+     */
+    @ExceptionHandler(IllegalReservationStateChangeException.class)
+    public ResponseEntity<ErrorDTO> handleIllegalReservationStateChange(IllegalReservationStateChangeException ex) {
         ErrorDTO errorDTO = new ErrorDTO(
             HttpStatus.CONFLICT.value(),
             ex.getMessage()
