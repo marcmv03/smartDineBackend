@@ -25,6 +25,7 @@ public class RestaurantReservationDTO {
     private Double endTime;
     private Integer numTable;
     private Boolean outside;
+    private String status;
 
     public static RestaurantReservationDTO fromEntity(Reservation reservation) {
         return new RestaurantReservationDTO(
@@ -34,7 +35,8 @@ public class RestaurantReservationDTO {
             reservation.getTimeSlot().getStartTime(),
             reservation.getTimeSlot().getEndTime(),
             reservation.getRestaurantTable().getNumber(),
-            reservation.getRestaurantTable().getOutside()
+            reservation.getRestaurantTable().getOutside(),
+            reservation.getStatus().name() 
         );
     }
 
