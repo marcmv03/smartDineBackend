@@ -8,16 +8,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.smartDine.dto.community.post.CreateCommunityPostRequestDTO;
+import com.smartDine.dto.community.post.CreateOpenReservationPostDTO;
 import com.smartDine.dto.community.post.UpdateCommunityPostRequestDTO;
 import com.smartDine.entity.Community;
+import com.smartDine.entity.Customer;
 import com.smartDine.entity.Member;
 import com.smartDine.entity.MemberRole;
+import com.smartDine.entity.Reservation;
+import com.smartDine.entity.Role;
 import com.smartDine.entity.User;
 import com.smartDine.entity.community.CommunityPost;
+import com.smartDine.entity.community.OpenReservationPost;
+import com.smartDine.entity.community.PostType;
 import com.smartDine.exceptions.NoUserIsMemberException;
 import com.smartDine.repository.CommunityMemberRepository;
 import com.smartDine.repository.CommunityPostRepository;
 import com.smartDine.repository.CommunityRepository;
+import com.smartDine.repository.OpenReservationPostRepository;
 import com.smartDine.repository.UserRepository;
 
 @Service
@@ -27,15 +34,21 @@ public class CommunityPostServiceImpl implements CommunityPostService {
     private final CommunityMemberRepository communityMemberRepository;
     private final CommunityRepository communityRepository;
     private final UserRepository userRepository;
+    private final OpenReservationPostRepository openReservationPostRepository;
+    private final ReservationService reservationService;
 
     public CommunityPostServiceImpl(CommunityPostRepository communityPostRepository,
             CommunityMemberRepository communityMemberRepository,
             CommunityRepository communityRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            OpenReservationPostRepository openReservationPostRepository,
+            ReservationService reservationService) {
         this.communityPostRepository = communityPostRepository;
         this.communityMemberRepository = communityMemberRepository;
         this.communityRepository = communityRepository;
         this.userRepository = userRepository;
+        this.openReservationPostRepository = openReservationPostRepository;
+        this.reservationService = reservationService;
     }
 
     @Override
@@ -156,5 +169,97 @@ public class CommunityPostServiceImpl implements CommunityPostService {
 
     private boolean isAdminOrOwner(Member member) {
         return member.getMemberRole() == MemberRole.ADMIN || member.getMemberRole() == MemberRole.OWNER;
+    }
+
+    @Override
+    @Transactional
+    public OpenReservationPost createOpenReservationPost(Long currentUserId, CreateOpenReservationPostDTO requestDTO) {
+        Community community = getCommunity(requestDTO.getCommunityId());
+        User user = getUser(currentUserId);
+        Member member = getMemberForCommunity(user, community);
+
+        // Validate user has OWNER or ADMIN role in community
+        if (!isAdminOrOwner(member)) {
+            throw new BadCredentialsException("Only administrators or owners can create open reservation posts");
+        }
+
+        // Validate user is a CUSTOMER (global role)
+        if (user.getRole() != Role.ROLE_CUSTOMER) {
+            throw new BadCredentialsException("Only customers can create open reservation posts");
+        }
+
+        Customer customer = (Customer) user;
+
+        // Get and validate reservation
+        Reservation reservation = reservationService.getReservationById(requestDTO.getReservationId());
+
+        // Validate user is a participant in the reservation (creator)
+        if (!reservationService.isParticipant(reservation, customer)) {
+            throw new IllegalArgumentException("You must be a participant of the reservation to create an open reservation post");
+        }
+
+        // Validate maxParticipants doesn't exceed remaining table capacity
+        // Available slots = table capacity - current total participants
+        int currentTotal = reservationService.getTotalParticipantsCount(reservation);
+        int availableSlots = reservation.getRestaurantTable().getCapacity() - currentTotal;
+        
+        if (requestDTO.getMaxParticipants() > availableSlots) {
+            throw new IllegalArgumentException(
+                "Max participants (" + requestDTO.getMaxParticipants() + 
+                ") exceeds available table capacity (" + availableSlots + " slots remaining)"
+            );
+        }
+
+        // Check if an open reservation post already exists for this reservation
+        if (openReservationPostRepository.existsByReservation(reservation)) {
+            throw new IllegalArgumentException("An open reservation post already exists for this reservation");
+        }
+
+        // Create and save the post
+        OpenReservationPost post = CreateOpenReservationPostDTO.toEntity(requestDTO, community, member, reservation);
+        return openReservationPostRepository.save(post);
+    }
+
+    @Override
+    @Transactional
+    public OpenReservationPost joinOpenReservationPost(Long postId, Long currentUserId) {
+        // Get the post and validate it's an OpenReservationPost
+        CommunityPost basePost = communityPostRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Post not found with id: " + postId));
+
+        if (basePost.getType() != PostType.OPEN_RESERVATION || !(basePost instanceof OpenReservationPost)) {
+            throw new IllegalArgumentException("Post is not an open reservation post");
+        }
+
+        OpenReservationPost post = (OpenReservationPost) basePost;
+        
+        User user = getUser(currentUserId);
+        
+        // Validate user is a member of the community
+        getMemberForCommunity(user, post.getCommunity());
+
+        // Validate user is a CUSTOMER
+        if (user.getRole() != Role.ROLE_CUSTOMER) {
+            throw new BadCredentialsException("Only customers can join open reservation posts");
+        }
+
+        Customer customer = (Customer) user;
+
+        // Check if there are available slots in the post
+        if (!post.hasAvailableSlots()) {
+            throw new IllegalArgumentException("No available slots in this open reservation post");
+        }
+
+        // Delegate to ReservationService for all reservation validations
+        // This will check: expiration, already participant, capacity, time conflicts
+        reservationService.addParticipantToReservation(
+            post.getReservation().getId(), 
+            customer, 
+            post.getMaxParticipants()
+        );
+
+        // Increment the post's participant count
+        post.incrementParticipants();
+        return openReservationPostRepository.save(post);
     }
 }

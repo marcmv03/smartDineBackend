@@ -888,7 +888,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
       security:
         - bearerAuth: []
-  /smartdine/api/communities/{communityId}/posts:
     post:
       tags:
         - Communities
@@ -1136,6 +1135,127 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
       security:
         - bearerAuth: []
+
+  /smartdine/api/communities/{communityId}/openreservationposts:
+    post:
+      tags:
+        - Communities
+      summary: Create open reservation post
+      description: |
+        Creates an open reservation post in a community, allowing other members to join an existing reservation.
+        The creator must be an OWNER or ADMIN of the community, have global CUSTOMER role, 
+        and be a participant of the linked reservation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: communityId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the community
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOpenReservationPostRequest'
+      responses:
+        '201':
+          description: Open reservation post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenReservationPost'
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - user is not an administrator/owner of the community or not a CUSTOMER
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Community or reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - user is not a member of the community, not a participant of the reservation, or max participants exceeds capacity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /smartdine/api/communities/{communityId}/openreservationposts/{postId}:
+    put:
+      tags:
+        - Communities
+      summary: Join open reservation post
+      description: |
+        Allows a user to join an open reservation post, adding them as a participant to the linked reservation.
+        Validates: user is a community member, has CUSTOMER role, post has available slots,
+        no time conflicts, and reservation date has not passed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: communityId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the community
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the open reservation post
+      responses:
+        '200':
+          description: Successfully joined the reservation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenReservationPost'
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - user is not a CUSTOMER or not a member of the community
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post not found or post is not an open reservation type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: |
+            Conflict - one of:
+            - User already a participant
+            - No available slots
+            - Time conflict with existing reservation
+            - Reservation date has passed (EXPIRED_OPEN_RESERVATION)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1607,3 +1727,76 @@ components:
         description:
           type: string
           maxLength: 2000
+    PostType:
+      type: string
+      enum:
+        - NORMAL
+        - OPEN_RESERVATION
+      description: Type of community post
+    CreateOpenReservationPostRequest:
+      type: object
+      required:
+        - title
+        - description
+        - reservationId
+        - maxParticipants
+      properties:
+        title:
+          type: string
+          maxLength: 150
+          description: Title of the post
+        description:
+          type: string
+          maxLength: 2000
+          description: Description of the open reservation post
+        reservationId:
+          type: integer
+          format: int64
+          description: ID of the existing reservation to share
+        maxParticipants:
+          type: integer
+          minimum: 1
+          description: Maximum number of additional participants that can join
+    OpenReservationPost:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        communityId:
+          type: integer
+          format: int64
+        authorId:
+          type: integer
+          format: int64
+        authorName:
+          type: string
+        type:
+          $ref: '#/components/schemas/PostType'
+        reservationId:
+          type: integer
+          format: int64
+        maxParticipants:
+          type: integer
+        currentParticipants:
+          type: integer
+        restaurantName:
+          type: string
+        reservationDate:
+          type: string
+          format: date
+        timeSlotStart:
+          type: number
+          format: double
+          description: Start time as decimal (e.g., 12.5 = 12:30)
+        timeSlotEnd:
+          type: number
+          format: double
+          description: End time as decimal (e.g., 14.0 = 14:00)

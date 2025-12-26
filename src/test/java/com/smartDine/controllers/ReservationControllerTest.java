@@ -90,6 +90,7 @@ class ReservationControllerTest {
         reservation.setNumGuests(2);
         reservation.setDate(reservationDate);
         reservation.setCreatedAt(LocalDate.now());
+        reservation.setStatus(ReservationStatus.CONFIRMED);
     }
 
     @Test

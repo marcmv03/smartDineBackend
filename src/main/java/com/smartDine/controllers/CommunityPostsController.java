@@ -2,6 +2,7 @@ package com.smartDine.controllers;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -18,9 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.smartDine.dto.community.post.CommunityPostResponseDTO;
 import com.smartDine.dto.community.post.CommunityPostSummaryDTO;
 import com.smartDine.dto.community.post.CreateCommunityPostRequestDTO;
+import com.smartDine.dto.community.post.CreateOpenReservationPostDTO;
+import com.smartDine.dto.community.post.OpenReservationPostResponseDTO;
 import com.smartDine.dto.community.post.UpdateCommunityPostRequestDTO;
 import com.smartDine.entity.User;
 import com.smartDine.entity.community.CommunityPost;
+import com.smartDine.entity.community.OpenReservationPost;
 import com.smartDine.services.CommunityPostService;
 
 import jakarta.validation.Valid;
@@ -88,5 +92,38 @@ public class CommunityPostsController {
             @AuthenticationPrincipal User user) {
         communityPostService.deletePost(postId, user.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Creates an open reservation post in a community.
+     * Allows community members to share their reservations for others to join.
+     */
+    @PostMapping("/communities/{communityId}/openreservationposts")
+    public ResponseEntity<OpenReservationPostResponseDTO> createOpenReservationPost(
+            @PathVariable Long communityId,
+            @Valid @RequestBody CreateOpenReservationPostDTO requestDTO,
+            @AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        requestDTO.setCommunityId(communityId);
+        OpenReservationPost post = communityPostService.createOpenReservationPost(user.getId(), requestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(OpenReservationPostResponseDTO.fromEntity(post));
+    }
+
+    /**
+     * Allows a user to join an open reservation post.
+     * The user will be added as a participant to the linked reservation.
+     */
+    @PutMapping("/communities/{communityId}/openreservationposts/{postId}")
+    public ResponseEntity<OpenReservationPostResponseDTO> joinOpenReservationPost(
+            @PathVariable Long communityId,
+            @PathVariable Long postId,
+            @AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        OpenReservationPost post = communityPostService.joinOpenReservationPost(postId, user.getId());
+        return ResponseEntity.ok(OpenReservationPostResponseDTO.fromEntity(post));
     }
 }

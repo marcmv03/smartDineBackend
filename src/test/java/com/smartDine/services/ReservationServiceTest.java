@@ -23,6 +23,7 @@ import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
+import com.smartDine.exceptions.ExpiredOpenReservationException;
 import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.repository.BusinessRepository;
 import com.smartDine.repository.CustomerRepository;
@@ -360,6 +361,151 @@ class ReservationServiceTest {
         );
 
         assertEquals("Reservation not found with id: 99999", exception.getMessage());
+    }
+
+    // ==================== addParticipantToReservation Tests ====================
+
+    @Test
+    @DisplayName("Should add participant to reservation successfully")
+    void addParticipantToReservation_Success() {
+        Business owner = createBusiness("OwnerParticipant1", "ownerparticipant1@smartdine.com", 300000001L);
+        Restaurant restaurant = createRestaurant(owner, "Participant Restaurant 1");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 1, 6);
+        Customer creator = createCustomer("Creator1", "creator1@smartdine.com", 400000001L);
+        Customer joiner = createCustomer("Joiner1", "joiner1@smartdine.com", 400000002L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(1));
+
+        Reservation reservation = reservationService.createReservation(dto, creator);
+
+        reservationService.addParticipantToReservation(reservation.getId(), joiner, 3);
+
+        Reservation updated = reservationService.getReservationById(reservation.getId());
+        assertEquals(1, updated.getParticipants().size());
+        assertEquals(true, reservationService.isParticipant(updated, joiner));
+    }
+
+    @Test
+    @DisplayName("Should throw ExpiredOpenReservationException when reservation date has passed")
+    void addParticipantToReservation_ExpiredReservation_ThrowsException() {
+        Business owner = createBusiness("OwnerParticipant2", "ownerparticipant2@smartdine.com", 300000002L);
+        Restaurant restaurant = createRestaurant(owner, "Participant Restaurant 2");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 1, 6);
+        Customer creator = createCustomer("Creator2", "creator2@smartdine.com", 400000003L);
+        Customer joiner = createCustomer("Joiner2", "joiner2@smartdine.com", 400000004L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().minusDays(1)); // Past date
+
+        Reservation reservation = reservationService.createReservation(dto, creator);
+
+        ExpiredOpenReservationException exception = assertThrows(
+            ExpiredOpenReservationException.class,
+            () -> reservationService.addParticipantToReservation(reservation.getId(), joiner, 3)
+        );
+
+        assertEquals("Cannot join reservation: the reservation date has already passed", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when customer is already a participant")
+    void addParticipantToReservation_AlreadyParticipant_ThrowsException() {
+        Business owner = createBusiness("OwnerParticipant3", "ownerparticipant3@smartdine.com", 300000003L);
+        Restaurant restaurant = createRestaurant(owner, "Participant Restaurant 3");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 1, 6);
+        Customer creator = createCustomer("Creator3", "creator3@smartdine.com", 400000005L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(1));
+
+        Reservation reservation = reservationService.createReservation(dto, creator);
+
+        // Creator tries to join again
+        IllegalReservationStateChangeException exception = assertThrows(
+            IllegalReservationStateChangeException.class,
+            () -> reservationService.addParticipantToReservation(reservation.getId(), creator, 3)
+        );
+
+        assertEquals("You are already a participant in this reservation", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when no available slots")
+    void addParticipantToReservation_NoAvailableSlots_ThrowsException() {
+        Business owner = createBusiness("OwnerParticipant4", "ownerparticipant4@smartdine.com", 300000004L);
+        Restaurant restaurant = createRestaurant(owner, "Participant Restaurant 4");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 1, 6);
+        Customer creator = createCustomer("Creator4", "creator4@smartdine.com", 400000006L);
+        Customer joiner1 = createCustomer("Joiner3", "joiner3@smartdine.com", 400000007L);
+        Customer joiner2 = createCustomer("Joiner4", "joiner4@smartdine.com", 400000008L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(1));
+
+        Reservation reservation = reservationService.createReservation(dto, creator);
+
+        // Add first joiner (maxParticipants = 1)
+        reservationService.addParticipantToReservation(reservation.getId(), joiner1, 1);
+
+        // Try to add second joiner when max is already reached
+        IllegalReservationStateChangeException exception = assertThrows(
+            IllegalReservationStateChangeException.class,
+            () -> reservationService.addParticipantToReservation(reservation.getId(), joiner2, 1)
+        );
+
+        assertEquals("No available slots: reservation is full", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when reservation is cancelled")
+    void addParticipantToReservation_CancelledReservation_ThrowsException() {
+        Business owner = createBusiness("OwnerParticipant5", "ownerparticipant5@smartdine.com", 300000005L);
+        Restaurant restaurant = createRestaurant(owner, "Participant Restaurant 5");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 1, 6);
+        Customer creator = createCustomer("Creator5", "creator5@smartdine.com", 400000009L);
+        Customer joiner = createCustomer("Joiner5", "joiner5@smartdine.com", 400000010L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(1));
+
+        Reservation reservation = reservationService.createReservation(dto, creator);
+        
+        // Cancel the reservation
+        reservationService.changeReservationStatus(reservation.getId(), ReservationStatus.CANCELLED, creator);
+
+        // Try to join cancelled reservation
+        IllegalReservationStateChangeException exception = assertThrows(
+            IllegalReservationStateChangeException.class,
+            () -> reservationService.addParticipantToReservation(reservation.getId(), joiner, 3)
+        );
+
+        assertEquals("Cannot join reservation: reservation is CANCELLED", exception.getMessage());
     }
 
     private Business createBusiness(String name, String email, Long phoneNumber) {

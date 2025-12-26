@@ -17,6 +17,7 @@ import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.Role;
 import com.smartDine.entity.TimeSlot;
 import com.smartDine.entity.User;
+import com.smartDine.exceptions.ExpiredOpenReservationException;
 import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.repository.ReservationRepository;
 import com.smartDine.repository.TimeSlotRepository;
@@ -142,5 +143,176 @@ public class ReservationService {
         }
 
         return reservationRepository.save(reservation);
+    }
+
+    /**
+     * Retrieves a reservation by its ID.
+     * 
+     * @param reservationId The ID of the reservation
+     * @return The reservation
+     * @throws IllegalArgumentException if not found
+     */
+    @Transactional(readOnly = true)
+    public Reservation getReservationById(Long reservationId) {
+        return reservationRepository.findById(reservationId)
+            .orElseThrow(() -> new IllegalArgumentException("Reservation not found with id: " + reservationId));
+    }
+
+    /**
+     * Checks if a customer is a participant in a reservation (either creator or joined participant).
+     * 
+     * @param reservation The reservation to check
+     * @param customer The customer to verify
+     * @return true if the customer is the creator or a participant
+     */
+    public boolean isParticipant(Reservation reservation, Customer customer) {
+        // Check if customer is the creator
+        if (reservation.getCustomer().getId().equals(customer.getId())) {
+            return true;
+        }
+        // Check if customer is in participants set
+        return reservation.getParticipants().stream()
+            .anyMatch(p -> p.getId().equals(customer.getId()));
+    }
+
+    /**
+     * Gets the total number of people in a reservation (creator + participants).
+     * 
+     * @param reservation The reservation
+     * @return Total count of people
+     */
+    public int getTotalParticipantsCount(Reservation reservation) {
+        return 1 + reservation.getParticipants().size();
+    }
+
+    /**
+     * Checks if a customer has a conflicting reservation at the same time slot and date.
+     * 
+     * @param customer The customer to check
+     * @param timeSlot The time slot
+     * @param date The date
+     * @param excludeReservationId Optional reservation ID to exclude from the check
+     * @return true if there's a conflict
+     */
+    @Transactional(readOnly = true)
+    public boolean hasTimeConflict(Customer customer, TimeSlot timeSlot, LocalDate date, Long excludeReservationId) {
+        // Get all reservations for this customer on this date
+        List<Reservation> customerReservations = reservationRepository.findByCustomerId(customer.getId());
+        
+        for (Reservation existing : customerReservations) {
+            // Skip the reservation we're trying to join
+            if (excludeReservationId != null && existing.getId().equals(excludeReservationId)) {
+                continue;
+            }
+            
+            // Only check confirmed reservations on the same date
+            if (existing.getStatus() == ReservationStatus.CONFIRMED && existing.getDate().equals(date)) {
+                // Check if time slots overlap
+                TimeSlot existingSlot = existing.getTimeSlot();
+                if (timeSlotsOverlap(existingSlot, timeSlot)) {
+                    return true;
+                }
+            }
+        }
+        
+        // Also check if the customer is a participant in other reservations
+        // This requires checking all reservations where this customer is a participant
+        List<Reservation> allReservations = reservationRepository.findAll();
+        for (Reservation existing : allReservations) {
+            if (excludeReservationId != null && existing.getId().equals(excludeReservationId)) {
+                continue;
+            }
+            
+            if (existing.getStatus() == ReservationStatus.CONFIRMED 
+                && existing.getDate().equals(date)
+                && existing.getParticipants().stream().anyMatch(p -> p.getId().equals(customer.getId()))) {
+                TimeSlot existingSlot = existing.getTimeSlot();
+                if (timeSlotsOverlap(existingSlot, timeSlot)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Checks if two time slots overlap.
+     */
+    private boolean timeSlotsOverlap(TimeSlot slot1, TimeSlot slot2) {
+        // Time slots overlap if they're on the same day and times intersect
+        if (slot1.getDayOfWeek() != slot2.getDayOfWeek()) {
+            return false;
+        }
+        
+        // Check if time ranges overlap
+        // Overlap occurs when: start1 < end2 AND start2 < end1
+        return slot1.getStartTime() < slot2.getEndTime() 
+            && slot2.getStartTime() < slot1.getEndTime();
+    }
+
+    /**
+     * Adds a participant to an existing reservation.
+     * 
+     * Validations:
+     * - Reservation must exist
+     * - Reservation date must not be in the past
+     * - Reservation must be confirmed
+     * - Customer must not already be a participant
+     * - Adding participant must not exceed table capacity
+     * - Customer must not have conflicting reservations
+     * 
+     * @param reservationId The reservation ID
+     * @param customer The customer to add
+     * @param maxAllowedParticipants The maximum participants allowed (from OpenReservationPost)
+     * @throws IllegalArgumentException if reservation not found
+     * @throws ExpiredOpenReservationException if reservation date is in the past
+     * @throws IllegalReservationStateChangeException for other validation failures
+     */
+    @Transactional
+    public void addParticipantToReservation(Long reservationId, Customer customer, int maxAllowedParticipants) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+            .orElseThrow(() -> new IllegalArgumentException("Reservation not found with id: " + reservationId));
+
+        // Check if reservation date has passed
+        if (reservation.getDate().isBefore(LocalDate.now())) {
+            throw new ExpiredOpenReservationException("Cannot join reservation: the reservation date has already passed");
+        }
+
+        // Check if reservation is confirmed
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+            throw new IllegalReservationStateChangeException(
+                "Cannot join reservation: reservation is " + reservation.getStatus()
+            );
+        }
+
+        // Check if customer is already a participant
+        if (isParticipant(reservation, customer)) {
+            throw new IllegalReservationStateChangeException("You are already a participant in this reservation");
+        }
+
+        // Check capacity: current participants (excluding creator) must be less than maxAllowedParticipants
+        if (reservation.getParticipants().size() >= maxAllowedParticipants) {
+            throw new IllegalReservationStateChangeException("No available slots: reservation is full");
+        }
+
+        // Check table capacity
+        int currentTotal = getTotalParticipantsCount(reservation);
+        if (currentTotal >= reservation.getRestaurantTable().getCapacity()) {
+            throw new IllegalReservationStateChangeException(
+                "Cannot join: adding you would exceed the table capacity of " + reservation.getRestaurantTable().getCapacity()
+            );
+        }
+
+        // Check for time conflicts
+        if (hasTimeConflict(customer, reservation.getTimeSlot(), reservation.getDate(), reservationId)) {
+            throw new IllegalReservationStateChangeException(
+                "Cannot join: you have a conflicting reservation at the same time"
+            );
+        }
+
+        // All validations passed - add the participant
+        reservation.getParticipants().add(customer);
+        reservationRepository.save(reservation);
     }
 }

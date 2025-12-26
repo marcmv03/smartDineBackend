@@ -1,6 +1,8 @@
 package com.smartDine.entity;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,6 +11,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -50,4 +54,16 @@ public class Reservation {
 
     @Column(name = "status")
     private ReservationStatus status;
+
+    /**
+     * Additional participants who joined the reservation (not including the creator).
+     * The total number of people is: 1 (creator) + participants.size()
+     */
+    @ManyToMany
+    @JoinTable(
+        name = "reservation_participants",
+        joinColumns = @JoinColumn(name = "reservation_id"),
+        inverseJoinColumns = @JoinColumn(name = "customer_id")
+    )
+    private Set<Customer> participants = new HashSet<>();
 }

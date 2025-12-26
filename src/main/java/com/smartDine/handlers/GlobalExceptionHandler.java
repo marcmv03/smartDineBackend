@@ -20,6 +20,7 @@ import com.smartDine.dto.ErrorDTO;
 import com.smartDine.dto.QueryParameterErrorDTO;
 import com.smartDine.dto.ValidationErrorDTO;
 import com.smartDine.exceptions.DuplicateUserException;
+import com.smartDine.exceptions.ExpiredOpenReservationException;
 import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.exceptions.MissingQueryParamException;
 import com.smartDine.exceptions.NoUserIsMemberException;
@@ -205,6 +206,19 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(IllegalReservationStateChangeException.class)
     public ResponseEntity<ErrorDTO> handleIllegalReservationStateChange(IllegalReservationStateChangeException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.CONFLICT.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Handle expired open reservation (409 Conflict)
+     * Thrown when attempting to join an open reservation where the date has passed
+     */
+    @ExceptionHandler(ExpiredOpenReservationException.class)
+    public ResponseEntity<ErrorDTO> handleExpiredOpenReservation(ExpiredOpenReservationException ex) {
         ErrorDTO errorDTO = new ErrorDTO(
             HttpStatus.CONFLICT.value(),
             ex.getMessage()
