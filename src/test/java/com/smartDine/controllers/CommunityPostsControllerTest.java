@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -34,6 +35,8 @@ import com.smartDine.entity.Member;
 import com.smartDine.entity.MemberRole;
 import com.smartDine.entity.User;
 import com.smartDine.entity.community.CommunityPost;
+import com.smartDine.entity.community.OpenReservationPost;
+import com.smartDine.entity.community.PostType;
 import com.smartDine.services.CommunityPostService;
 
 @ExtendWith(MockitoExtension.class)
@@ -111,7 +114,9 @@ public class CommunityPostsControllerTest {
         mockMvc.perform(post("/smartdine/api/communities/1/posts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"communityId\":1,\"title\":\"Title\",\"description\":\"Body\"}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.postType").exists())
+                .andExpect(jsonPath("$.postType").value("NORMAL"));
 
         verify(communityPostService).createPost(anyLong(), any());
     }
@@ -123,6 +128,7 @@ public class CommunityPostsControllerTest {
         when(communityPostService.getPostsByMember(anyLong(), any(), any()))
                 .thenReturn(List.of(post));
 
+        // getPostsByMember returns CommunityPostSummaryDTO which doesn't include postType
         mockMvc.perform(get("/smartdine/api/communities/members/3/posts"))
                 .andExpect(status().isOk());
 
@@ -135,5 +141,31 @@ public class CommunityPostsControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(communityPostService).deletePost(anyLong(), anyLong());
+    }
+
+    @Test
+    void getOpenReservationPostShouldReturnCorrectPostType() throws Exception {
+        // Create an OpenReservationPost
+        OpenReservationPost openPost = new OpenReservationPost();
+        openPost.setId(5L);
+        openPost.setTitle("Open Reservation");
+        openPost.setDescription("Join our dinner!");
+        openPost.setCommunity(community);
+        openPost.setAuthor(member);
+        openPost.setPublishedAt(LocalDateTime.now());
+        openPost.setMaxParticipants(5);
+        openPost.setCurrentParticipants(2);
+        // The constructor already sets type to OPEN_RESERVATION
+
+        when(communityPostService.getOpenReservationPostById(anyLong(), any()))
+                .thenReturn(openPost);
+
+        // OpenReservationPostResponseDTO uses PostType enum, serialized as string
+        mockMvc.perform(get("/smartdine/api/communities/1/openreservationposts/5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").exists())
+                .andExpect(jsonPath("$.type").value("OPEN_RESERVATION"));
+
+        verify(communityPostService).getOpenReservationPostById(anyLong(), any());
     }
 }

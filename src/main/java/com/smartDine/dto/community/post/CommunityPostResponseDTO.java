@@ -8,6 +8,7 @@ import com.smartDine.entity.community.CommunityPost;
 public class CommunityPostResponseDTO extends CommunityPostBaseDTO {
     private String description;
     private String authorName;
+    private String postType;
 
     public String getDescription() {
         return description;
@@ -38,6 +39,7 @@ public class CommunityPostResponseDTO extends CommunityPostBaseDTO {
             dto.setAuthorId(post.getAuthor().getId());
             dto.setAuthorName(post.getAuthor().getUser().getName());
         }
+        dto.setPostType(post.getType().name());
         return dto;
     }
 
@@ -45,5 +47,13 @@ public class CommunityPostResponseDTO extends CommunityPostBaseDTO {
         return posts.stream()
             .map(CommunityPostResponseDTO::fromEntity)
             .collect(Collectors.toList());
+    }
+
+    public String getPostType() {
+        return postType;
+    }
+
+    public void setPostType(String postType) {
+        this.postType = postType;
     }
 }
