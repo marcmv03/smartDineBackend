@@ -38,6 +38,7 @@ public abstract class MenuItem {
     private String imageUrl;
 
     @ManyToOne
+    @jakarta.persistence.JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
 
 }
