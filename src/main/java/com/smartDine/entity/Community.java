@@ -44,6 +44,9 @@ public class Community {
     @OneToMany(mappedBy = "community", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Member> members = new ArrayList<>();
 
+    @OneToMany(mappedBy = "community", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<com.smartDine.entity.community.CommunityPost> posts = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -73,4 +76,7 @@ public class Community {
 
     public List<Member> getMembers() { return members; }
     public void setMembers(List<Member> members) { this.members = members; }
+
+    public List<com.smartDine.entity.community.CommunityPost> getPosts() { return posts; }
+    public void setPosts(List<com.smartDine.entity.community.CommunityPost> posts) { this.posts = posts; }
 }

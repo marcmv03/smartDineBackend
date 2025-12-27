@@ -1,7 +1,10 @@
 package com.smartDine.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -39,6 +43,9 @@ public class Member {
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinedAt;
 
+    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<com.smartDine.entity.community.CommunityPost> posts = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         joinedAt = LocalDateTime.now();
@@ -59,4 +66,7 @@ public class Member {
 
     public LocalDateTime getJoinedAt() { return joinedAt; }
     public void setJoinedAt(LocalDateTime joinedAt) { this.joinedAt = joinedAt; }
+
+    public List<com.smartDine.entity.community.CommunityPost> getPosts() { return posts; }
+    public void setPosts(List<com.smartDine.entity.community.CommunityPost> posts) { this.posts = posts; }
 }
