@@ -262,4 +262,24 @@ public class CommunityPostServiceImpl implements CommunityPostService {
         post.incrementParticipants();
         return openReservationPostRepository.save(post);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OpenReservationPost getOpenReservationPostById(Long postId, Long currentUserId) {
+        // Get the post
+        CommunityPost basePost = communityPostRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Post not found with id: " + postId));
+
+        // Validate it's an OpenReservationPost
+        if (basePost.getType() != PostType.OPEN_RESERVATION || !(basePost instanceof OpenReservationPost)) {
+            throw new IllegalArgumentException("Post is not an open reservation post");
+        }
+
+        OpenReservationPost post = (OpenReservationPost) basePost;
+
+        // Validate read access to the community
+        validateReadAccess(post.getCommunity(), currentUserId);
+
+        return post;
+    }
 }

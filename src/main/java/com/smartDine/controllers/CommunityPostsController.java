@@ -126,4 +126,19 @@ public class CommunityPostsController {
         OpenReservationPost post = communityPostService.joinOpenReservationPost(postId, user.getId());
         return ResponseEntity.ok(OpenReservationPostResponseDTO.fromEntity(post));
     }
+
+    /**
+     * Gets a specific open reservation post by ID.
+     * Returns details about the reservation available for joining.
+     */
+    @GetMapping("/communities/{communityId}/openreservationposts/{postId}")
+    public ResponseEntity<OpenReservationPostResponseDTO> getOpenReservationPost(
+            @PathVariable Long communityId,
+            @PathVariable Long postId,
+            @AuthenticationPrincipal User user) {
+        OpenReservationPost post = communityPostService.getOpenReservationPostById(
+                postId, 
+                user != null ? user.getId() : null);
+        return ResponseEntity.ok(OpenReservationPostResponseDTO.fromEntity(post));
+    }
 }

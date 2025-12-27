@@ -38,4 +38,13 @@ public interface CommunityPostService {
      * @return The updated OpenReservationPost
      */
     OpenReservationPost joinOpenReservationPost(Long postId, Long currentUserId);
+
+    /**
+     * Gets an open reservation post by its ID.
+     * 
+     * @param postId The ID of the open reservation post
+     * @param currentUserId The ID of the current user (can be null for public communities)
+     * @return The OpenReservationPost
+     */
+    OpenReservationPost getOpenReservationPostById(Long postId, Long currentUserId);
 }

@@ -1255,6 +1255,61 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Communities
+      summary: Get open reservation post
+      description: |
+        Retrieves details of a specific open reservation post.
+        Returns information about the reservation, available slots, and restaurant details.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: communityId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the community
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the open reservation post
+      responses:
+        '200':
+          description: Successfully retrieved the open reservation post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenReservationPost'
+        '401':
+          description: Unauthorized - authentication may be required for private communities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - access to private community denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Post not found or post is not an open reservation type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - user is not a member of the private community
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   securitySchemes:
