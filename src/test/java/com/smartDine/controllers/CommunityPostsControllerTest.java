@@ -36,7 +36,6 @@ import com.smartDine.entity.MemberRole;
 import com.smartDine.entity.User;
 import com.smartDine.entity.community.CommunityPost;
 import com.smartDine.entity.community.OpenReservationPost;
-import com.smartDine.entity.community.PostType;
 import com.smartDine.services.CommunityPostService;
 
 @ExtendWith(MockitoExtension.class)
