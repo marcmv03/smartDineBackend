@@ -160,7 +160,7 @@ public class CommunityPostsControllerTest {
                 .thenReturn(openPost);
 
         // OpenReservationPostResponseDTO uses PostType enum, serialized as string
-        mockMvc.perform(get("/smartdine/api/communities/1/openreservationposts/5"))
+        mockMvc.perform(get("/smartdine/api/communities/openreservationposts/5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.type").exists())
                 .andExpect(jsonPath("$.type").value("OPEN_RESERVATION"));

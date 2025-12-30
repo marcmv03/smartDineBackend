@@ -7,4 +7,5 @@ source .env
 set +a
 
 # Run the Spring Boot JAR
+
 java -jar target/demo-0.0.1-SNAPSHOT.jar

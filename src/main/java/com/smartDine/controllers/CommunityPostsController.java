@@ -115,9 +115,8 @@ public class CommunityPostsController {
      * Allows a user to join an open reservation post.
      * The user will be added as a participant to the linked reservation.
      */
-    @PutMapping("/communities/{communityId}/openreservationposts/{postId}")
+    @PutMapping("/communities/openreservationposts/{postId}")
     public ResponseEntity<OpenReservationPostResponseDTO> joinOpenReservationPost(
-            @PathVariable Long communityId,
             @PathVariable Long postId,
             @AuthenticationPrincipal User user) {
         if (user == null) {
@@ -131,9 +130,8 @@ public class CommunityPostsController {
      * Gets a specific open reservation post by ID.
      * Returns details about the reservation available for joining.
      */
-    @GetMapping("/communities/{communityId}/openreservationposts/{postId}")
+    @GetMapping("/communities/openreservationposts/{postId}")
     public ResponseEntity<OpenReservationPostResponseDTO> getOpenReservationPost(
-            @PathVariable Long communityId,
             @PathVariable Long postId,
             @AuthenticationPrincipal User user) {
         OpenReservationPost post = communityPostService.getOpenReservationPostById(
