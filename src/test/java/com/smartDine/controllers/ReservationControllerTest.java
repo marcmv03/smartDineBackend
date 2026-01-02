@@ -30,10 +30,12 @@ import com.smartDine.entity.Reservation;
 import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
+import com.smartDine.entity.ReservationParticipation;
 import com.smartDine.entity.TimeSlot;
 import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.services.CustomerService;
 import com.smartDine.services.ReservationService;
+import com.smartDine.services.ReservationParticipationService;
 
 @ExtendWith(MockitoExtension.class)
 class ReservationControllerTest {
@@ -43,6 +45,9 @@ class ReservationControllerTest {
 
     @Mock
     private CustomerService customerService;
+
+    @Mock
+    private ReservationParticipationService participationService;
 
     @InjectMocks
     private ReservationController reservationController;
@@ -130,6 +135,7 @@ class ReservationControllerTest {
     void getMyReservationsReturnsListForCustomer() {
         when(customerService.getCustomerById(1L)).thenReturn(customer);
         when(reservationService.getReservationsForCustomer(1L)).thenReturn(List.of(reservation));
+        when(participationService.getUserParticipations(1L)).thenReturn(List.of());
 
         ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(customer);
 
@@ -155,6 +161,93 @@ class ReservationControllerTest {
         businessUser.setId(3L);
         ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(businessUser);
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
+
+    @Test
+    void getMyReservationsIncludesParticipatedReservations() {
+        // Create another customer's reservation that current customer participates in
+        Customer otherCustomer = new Customer();
+        otherCustomer.setId(2L);
+        otherCustomer.setEmail("other@smartdine.com");
+        otherCustomer.setName("Other Customer");
+
+        Reservation participatedReservation = new Reservation();
+        participatedReservation.setId(50L);
+        participatedReservation.setCustomer(otherCustomer); // Owned by different customer
+        participatedReservation.setRestaurant(reservation.getRestaurant());
+        participatedReservation.setTimeSlot(reservation.getTimeSlot());
+        participatedReservation.setRestaurantTable(reservation.getRestaurantTable());
+        participatedReservation.setNumGuests(3);
+        participatedReservation.setDate(reservationDate.plusDays(1));
+        participatedReservation.setCreatedAt(LocalDate.now());
+        participatedReservation.setStatus(ReservationStatus.CONFIRMED);
+
+        ReservationParticipation participation = new ReservationParticipation(participatedReservation, customer);
+
+        // Mock: Customer owns 1 reservation and participates in 1 other reservation
+        when(customerService.getCustomerById(1L)).thenReturn(customer);
+        when(reservationService.getReservationsForCustomer(1L)).thenReturn(List.of(reservation));
+        when(participationService.getUserParticipations(1L)).thenReturn(List.of(participation));
+
+        ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(customer);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(2, response.getBody().size()); // 1 owned + 1 participated
+
+        // Verify both reservations are present
+        List<Long> reservationIds = response.getBody().stream()
+                .map(ReservationDetailsDTO::getReservationId)
+                .sorted()
+                .toList();
+        assertEquals(List.of(40L, 50L), reservationIds);
+    }
+
+    @Test
+    void getMyReservationsRemovesDuplicatesWhenUserOwnsAndParticipatesInSameReservation() {
+        // Edge case: User owns a reservation and also has a participation record for it
+        ReservationParticipation selfParticipation = new ReservationParticipation(reservation, customer);
+
+        when(customerService.getCustomerById(1L)).thenReturn(customer);
+        when(reservationService.getReservationsForCustomer(1L)).thenReturn(List.of(reservation));
+        when(participationService.getUserParticipations(1L)).thenReturn(List.of(selfParticipation));
+
+        ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(customer);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size()); // Only 1 reservation despite being in both lists
+        assertEquals(40L, response.getBody().get(0).getReservationId());
+    }
+
+    @Test
+    void getMyReservationsOnlyParticipatedNoOwned() {
+        // Customer participates in a reservation but doesn't own any
+        Customer otherCustomer = new Customer();
+        otherCustomer.setId(2L);
+
+        Reservation participatedReservation = new Reservation();
+        participatedReservation.setId(50L);
+        participatedReservation.setCustomer(otherCustomer);
+        participatedReservation.setRestaurant(reservation.getRestaurant());
+        participatedReservation.setTimeSlot(reservation.getTimeSlot());
+        participatedReservation.setRestaurantTable(reservation.getRestaurantTable());
+        participatedReservation.setNumGuests(3);
+        participatedReservation.setDate(reservationDate.plusDays(1));
+        participatedReservation.setStatus(ReservationStatus.CONFIRMED);
+
+        ReservationParticipation participation = new ReservationParticipation(participatedReservation, customer);
+
+        when(customerService.getCustomerById(1L)).thenReturn(customer);
+        when(reservationService.getReservationsForCustomer(1L)).thenReturn(List.of());
+        when(participationService.getUserParticipations(1L)).thenReturn(List.of(participation));
+
+        ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(customer);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals(50L, response.getBody().get(0).getReservationId());
     }
 
     @Test

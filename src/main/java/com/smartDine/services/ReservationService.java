@@ -3,6 +3,7 @@ package com.smartDine.services;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +12,7 @@ import com.smartDine.dto.ReservationDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
+import com.smartDine.entity.ReservationParticipation;
 import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
@@ -22,25 +24,19 @@ import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.repository.ReservationRepository;
 import com.smartDine.repository.TimeSlotRepository;
 
+
 @Service
 public class ReservationService {
-
-    private final ReservationRepository reservationRepository;
-    private final RestaurantService restaurantService;
-    private final TimeSlotRepository timeSlotRepository;
-    private final RestaurantTableService restaurantTableService;
-
-    public ReservationService(
-        ReservationRepository reservationRepository,
-        RestaurantService restaurantService,
-        TimeSlotRepository timeSlotRepository,
-        RestaurantTableService restaurantTableService
-    ) {
-        this.reservationRepository = reservationRepository;
-        this.restaurantService = restaurantService;
-        this.timeSlotRepository = timeSlotRepository;
-        this.restaurantTableService = restaurantTableService;
-    }
+    @Autowired
+    private ReservationRepository reservationRepository;
+    @Autowired
+    private  RestaurantService restaurantService;
+    @Autowired
+    private TimeSlotRepository timeSlotRepository;
+    @Autowired
+    private  RestaurantTableService restaurantTableService;
+    @Autowired
+    private  ReservationParticipationService reservationParticipationService;
 
     @Transactional
     public Reservation createReservation(ReservationDTO reservationDTO, Customer customer) {
@@ -315,4 +311,10 @@ public class ReservationService {
         reservation.getParticipants().add(customer);
         reservationRepository.save(reservation);
     }
+    public List<Reservation> getAllJoinedReservationsByCustomer(Long customerId) {
+        List<ReservationParticipation> participations = reservationParticipationService.getUserParticipations(customerId) ;
+        return participations.stream()
+            .map(ReservationParticipation::getReservation)
+            .toList();
+}
 }

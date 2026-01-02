@@ -73,4 +73,7 @@ public class Reservation {
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<com.smartDine.entity.community.OpenReservationPost> openReservationPosts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReservationParticipation> participations = new ArrayList<>();
 }

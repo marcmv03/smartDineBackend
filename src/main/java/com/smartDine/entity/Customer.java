@@ -21,6 +21,9 @@ public class Customer extends User  {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Reservation> reservations = new ArrayList<>();
 
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReservationParticipation> participations = new ArrayList<>();
+
     public Customer() {
         super();
         this.setRole("customer");
@@ -36,5 +39,10 @@ public class Customer extends User  {
 
     public void setReservations(List<Reservation> reservations) {
         this.reservations = reservations;
+    }
+
+
+    public void setParticipations(List<ReservationParticipation> participations) {
+        this.participations = participations;
     }
 }
