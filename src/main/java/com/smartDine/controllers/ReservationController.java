@@ -2,7 +2,6 @@ package com.smartDine.controllers;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -26,11 +25,9 @@ import com.smartDine.dto.UpdateReservationStatusDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
-import com.smartDine.entity.ReservationParticipation;
 import com.smartDine.entity.Role;
 import com.smartDine.entity.User;
 import com.smartDine.services.CustomerService;
-import com.smartDine.services.ReservationParticipationService;
 import com.smartDine.services.ReservationService;
 
 import jakarta.validation.Valid;
@@ -42,15 +39,12 @@ public class ReservationController {
 
     private final ReservationService reservationService;
     private final CustomerService customerService;
-    private final ReservationParticipationService participationService;
 
     public ReservationController(
             ReservationService reservationService,
-            CustomerService customerService,
-            ReservationParticipationService participationService) {
+            CustomerService customerService) {
         this.reservationService = reservationService;
         this.customerService = customerService;
-        this.participationService = participationService;
     }
 
     @PostMapping("/reservations")
@@ -97,22 +91,7 @@ public class ReservationController {
         }
 
         Customer customer = customerService.getCustomerById(user.getId());
-        
-        // Get reservations owned by the customer
-        List<Reservation> ownedReservations = reservationService.getReservationsForCustomer(customer.getId());
-        
-        // Get reservations the customer participates in
-        List<ReservationParticipation> participations = participationService.getUserParticipations(customer.getId());
-        List<Reservation> participatedReservations = participations.stream()
-                .map(ReservationParticipation::getReservation)
-                .toList();
-        
-        // Combine both lists and remove duplicates (in case user owns a reservation they also participate in)
-        List<Reservation> allReservations = Stream.concat(
-                ownedReservations.stream(),
-                participatedReservations.stream()
-        ).distinct().toList();
-        
+        List<Reservation> allReservations = reservationService.getAllReservationsForCustomer(customer.getId());
         List<ReservationDetailsDTO> response = ReservationDetailsDTO.fromEntity(allReservations);
         return ResponseEntity.ok(response);
     }

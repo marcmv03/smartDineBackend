@@ -69,6 +69,30 @@ public class ReservationService {
     public List<Reservation> getReservationsForCustomer(Long customerId) {
         return reservationRepository.findByCustomerId(customerId);
     }
+
+    /**
+     * Gets all reservations for a customer, including both owned and participated reservations.
+     * 
+     * @param customerId The ID of the customer
+     * @return List of all reservations (owned + participated) with duplicates removed
+     */
+    @Transactional(readOnly = true)
+    public List<Reservation> getAllReservationsForCustomer(Long customerId) {
+        // Get reservations owned by the customer
+        List<Reservation> ownedReservations = reservationRepository.findByCustomerId(customerId);
+        
+        // Get reservations the customer participates in
+        List<ReservationParticipation> participations = reservationParticipationService.getUserParticipations(customerId);
+        List<Reservation> participatedReservations = participations.stream()
+                .map(ReservationParticipation::getReservation)
+                .toList();
+        
+        // Combine both lists and remove duplicates
+        return java.util.stream.Stream.concat(
+                ownedReservations.stream(),
+                participatedReservations.stream()
+        ).distinct().toList();
+    }
     @Transactional(readOnly = true)
     public List<Reservation> getReservationsByRestaurantAndDateAndTimeSlot(Long restaurantId, java.time.LocalDate date, Long timeSlotId) {
         return reservationRepository.findByRestaurantIdAndDateAndTimeSlotId(restaurantId, date, timeSlotId);
@@ -155,7 +179,7 @@ public class ReservationService {
     }
 
     /**
-     * Checks if a customer is a participant in a reservation (either creator or joined participant).
+     * Checks if a customer is a participant of a reservation (either as creator or participant).
      * 
      * @param reservation The reservation to check
      * @param customer The customer to verify
@@ -166,9 +190,8 @@ public class ReservationService {
         if (reservation.getCustomer().getId().equals(customer.getId())) {
             return true;
         }
-        // Check if customer is in participants set
-        return reservation.getParticipants().stream()
-            .anyMatch(p -> p.getId().equals(customer.getId()));
+        // Check if customer is in participation records
+        return reservationParticipationService.isParticipant(customer.getId(), reservation.getId());
     }
 
     /**
@@ -178,7 +201,8 @@ public class ReservationService {
      * @return Total count of people
      */
     public int getTotalParticipantsCount(Reservation reservation) {
-        return 1 + reservation.getParticipants().size();
+        int participantsCount = reservationParticipationService.getParticipants(reservation.getId()).size();
+        return 1 + participantsCount;  // 1 for creator + participants
     }
 
     /**
@@ -212,16 +236,15 @@ public class ReservationService {
         }
         
         // Also check if the customer is a participant in other reservations
-        // This requires checking all reservations where this customer is a participant
-        List<Reservation> allReservations = reservationRepository.findAll();
-        for (Reservation existing : allReservations) {
+        List<ReservationParticipation> participations = reservationParticipationService.getUserParticipations(customer.getId());
+        for (ReservationParticipation participation : participations) {
+            Reservation existing = participation.getReservation();
             if (excludeReservationId != null && existing.getId().equals(excludeReservationId)) {
                 continue;
             }
             
             if (existing.getStatus() == ReservationStatus.CONFIRMED 
-                && existing.getDate().equals(date)
-                && existing.getParticipants().stream().anyMatch(p -> p.getId().equals(customer.getId()))) {
+                && existing.getDate().equals(date)) {
                 TimeSlot existingSlot = existing.getTimeSlot();
                 if (timeSlotsOverlap(existingSlot, timeSlot)) {
                     return true;
@@ -288,7 +311,8 @@ public class ReservationService {
         }
 
         // Check capacity: current participants (excluding creator) must be less than maxAllowedParticipants
-        if (reservation.getParticipants().size() >= maxAllowedParticipants) {
+        int currentParticipantsCount = reservationParticipationService.getParticipants(reservationId).size();
+        if (currentParticipantsCount >= maxAllowedParticipants) {
             throw new IllegalReservationStateChangeException("No available slots: reservation is full");
         }
 
@@ -307,9 +331,8 @@ public class ReservationService {
             );
         }
 
-        // All validations passed - add the participant
-        reservation.getParticipants().add(customer);
-        reservationRepository.save(reservation);
+        // All validations passed - add the participant using ReservationParticipation
+        reservationParticipationService.createNewParticipation(customer.getId(), reservationId);
     }
     public List<Reservation> getAllJoinedReservationsByCustomer(Long customerId) {
         List<ReservationParticipation> participations = reservationParticipationService.getUserParticipations(customerId) ;

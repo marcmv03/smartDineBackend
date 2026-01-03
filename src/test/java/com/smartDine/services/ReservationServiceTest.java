@@ -386,9 +386,10 @@ class ReservationServiceTest {
 
         reservationService.addParticipantToReservation(reservation.getId(), joiner, 3);
 
+        // Verify using ReservationParticipationService
         Reservation updated = reservationService.getReservationById(reservation.getId());
-        assertEquals(1, updated.getParticipants().size());
         assertEquals(true, reservationService.isParticipant(updated, joiner));
+        assertEquals(2, reservationService.getTotalParticipantsCount(updated)); // 1 creator + 1 participant
     }
 
     @Test
@@ -506,6 +507,129 @@ class ReservationServiceTest {
         );
 
         assertEquals("Cannot join reservation: reservation is CANCELLED", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("getAllReservationsForCustomer returns only owned reservations when no participations")
+    void getAllReservationsForCustomerOnlyOwned() {
+        Business owner = createBusiness("Owner GetAll1", "ownergetall1@smartdine.com", 777777771L);
+        Restaurant restaurant = createRestaurant(owner, "Restaurant GetAll1");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 1, 4);
+        Customer customer = createCustomer("Customer GetAll1", "customergetall1@smartdine.com", 888888881L);
+
+        LocalDate reservationDate = LocalDate.now().plusDays(1);
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(reservationDate);
+
+        reservationService.createReservation(dto, customer);
+
+        List<Reservation> allReservations = reservationService.getAllReservationsForCustomer(customer.getId());
+
+        assertEquals(1, allReservations.size());
+        assertEquals(customer.getId(), allReservations.get(0).getCustomer().getId());
+    }
+
+    @Test
+    @DisplayName("getAllReservationsForCustomer returns both owned and participated reservations")
+    void getAllReservationsForCustomerOwnedAndParticipated() {
+        Business owner = createBusiness("Owner GetAll2", "ownergetall2@smartdine.com", 777777772L);
+        Restaurant restaurant = createRestaurant(owner, "Restaurant GetAll2");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.TUESDAY, 18.0, 20.0);
+        RestaurantTable table = createTable(restaurant, 2, 6);
+        Customer customer1 = createCustomer("Customer GetAll2", "customergetall2@smartdine.com", 888888882L);
+        Customer customer2 = createCustomer("Customer GetAll3", "customergetall3@smartdine.com", 888888883L);
+
+        // Customer1 creates their own reservation
+        LocalDate date1 = LocalDate.now().plusDays(1);
+        ReservationDTO dto1 = new ReservationDTO();
+        dto1.setRestaurantId(restaurant.getId());
+        dto1.setTimeSlotId(timeSlot.getId());
+        dto1.setTableId(table.getId());
+        dto1.setNumCustomers(2);
+        dto1.setDate(date1);
+        reservationService.createReservation(dto1, customer1);
+
+        // Customer2 creates a reservation and customer1 joins it
+        LocalDate date2 = LocalDate.now().plusDays(2);
+        ReservationDTO dto2 = new ReservationDTO();
+        dto2.setRestaurantId(restaurant.getId());
+        dto2.setTimeSlotId(timeSlot.getId());
+        dto2.setTableId(table.getId());
+        dto2.setNumCustomers(4);
+        dto2.setDate(date2);
+        Reservation reservation2 = reservationService.createReservation(dto2, customer2);
+        reservationService.addParticipantToReservation(reservation2.getId(), customer1, 1);
+
+        List<Reservation> allReservations = reservationService.getAllReservationsForCustomer(customer1.getId());
+
+        assertEquals(2, allReservations.size());
+        List<Long> customerIds = allReservations.stream()
+                .map(r -> r.getCustomer().getId())
+                .distinct()
+                .sorted()
+                .toList();
+        assertEquals(List.of(customer1.getId(), customer2.getId()), customerIds);
+    }
+
+    @Test
+    @DisplayName("getAllReservationsForCustomer prevents owner from being added as participant")
+    void getAllReservationsForCustomerOwnerCannotBeParticipant() {
+        Business owner = createBusiness("Owner GetAll3", "ownergetall3@smartdine.com", 777777773L);
+        Restaurant restaurant = createRestaurant(owner, "Restaurant GetAll3");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.WEDNESDAY, 13.0, 15.0);
+        RestaurantTable table = createTable(restaurant, 3, 8);
+        Customer customer = createCustomer("Customer GetAll4", "customergetall4@smartdine.com", 888888884L);
+
+        LocalDate reservationDate = LocalDate.now().plusDays(3);
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(4);
+        dto.setDate(reservationDate);
+
+        Reservation reservation = reservationService.createReservation(dto, customer);
+        
+        // Attempt to add owner as participant should throw exception
+        IllegalReservationStateChangeException exception = assertThrows(
+            IllegalReservationStateChangeException.class,
+            () -> reservationService.addParticipantToReservation(reservation.getId(), customer, 1)
+        );
+        
+        assertEquals("You are already a participant in this reservation", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("getAllReservationsForCustomer returns only participated reservations when customer owns none")
+    void getAllReservationsForCustomerOnlyParticipated() {
+        Business owner = createBusiness("Owner GetAll4", "ownergetall4@smartdine.com", 777777774L);
+        Restaurant restaurant = createRestaurant(owner, "Restaurant GetAll4");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.THURSDAY, 19.0, 21.0);
+        RestaurantTable table = createTable(restaurant, 4, 4);
+        Customer reservationOwner = createCustomer("Owner Customer GetAll5", "ownergetall5@smartdine.com", 888888885L);
+        Customer participant = createCustomer("Participant GetAll6", "participantgetall6@smartdine.com", 888888886L);
+
+        LocalDate reservationDate = LocalDate.now().plusDays(4);
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(3);
+        dto.setDate(reservationDate);
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+        reservationService.addParticipantToReservation(reservation.getId(), participant, 1);
+
+        List<Reservation> allReservations = reservationService.getAllReservationsForCustomer(participant.getId());
+
+        assertEquals(1, allReservations.size());
+        assertEquals(reservation.getId(), allReservations.get(0).getId());
+        assertEquals(reservationOwner.getId(), allReservations.get(0).getCustomer().getId());
     }
 
     private Business createBusiness(String name, String email, Long phoneNumber) {

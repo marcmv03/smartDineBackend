@@ -27,14 +27,12 @@ import com.smartDine.dto.UpdateReservationStatusDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
-import com.smartDine.entity.ReservationParticipation;
 import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
 import com.smartDine.entity.TimeSlot;
 import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.services.CustomerService;
-import com.smartDine.services.ReservationParticipationService;
 import com.smartDine.services.ReservationService;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,9 +43,6 @@ class ReservationControllerTest {
 
     @Mock
     private CustomerService customerService;
-
-    @Mock
-    private ReservationParticipationService participationService;
 
     @InjectMocks
     private ReservationController reservationController;
@@ -134,8 +129,7 @@ class ReservationControllerTest {
     @Test
     void getMyReservationsReturnsListForCustomer() {
         when(customerService.getCustomerById(1L)).thenReturn(customer);
-        when(reservationService.getReservationsForCustomer(1L)).thenReturn(List.of(reservation));
-        when(participationService.getUserParticipations(1L)).thenReturn(List.of());
+        when(reservationService.getAllReservationsForCustomer(1L)).thenReturn(List.of(reservation));
 
         ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(customer);
 
@@ -182,12 +176,9 @@ class ReservationControllerTest {
         participatedReservation.setCreatedAt(LocalDate.now());
         participatedReservation.setStatus(ReservationStatus.CONFIRMED);
 
-        ReservationParticipation participation = new ReservationParticipation(participatedReservation, customer);
-
-        // Mock: Customer owns 1 reservation and participates in 1 other reservation
+        // Mock: Service returns both owned and participated reservations
         when(customerService.getCustomerById(1L)).thenReturn(customer);
-        when(reservationService.getReservationsForCustomer(1L)).thenReturn(List.of(reservation));
-        when(participationService.getUserParticipations(1L)).thenReturn(List.of(participation));
+        when(reservationService.getAllReservationsForCustomer(1L)).thenReturn(List.of(reservation, participatedReservation));
 
         ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(customer);
 
@@ -205,12 +196,9 @@ class ReservationControllerTest {
 
     @Test
     void getMyReservationsRemovesDuplicatesWhenUserOwnsAndParticipatesInSameReservation() {
-        // Edge case: User owns a reservation and also has a participation record for it
-        ReservationParticipation selfParticipation = new ReservationParticipation(reservation, customer);
-
+        // Edge case: Service handles duplicate removal
         when(customerService.getCustomerById(1L)).thenReturn(customer);
-        when(reservationService.getReservationsForCustomer(1L)).thenReturn(List.of(reservation));
-        when(participationService.getUserParticipations(1L)).thenReturn(List.of(selfParticipation));
+        when(reservationService.getAllReservationsForCustomer(1L)).thenReturn(List.of(reservation));
 
         ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(customer);
 
@@ -236,11 +224,8 @@ class ReservationControllerTest {
         participatedReservation.setDate(reservationDate.plusDays(1));
         participatedReservation.setStatus(ReservationStatus.CONFIRMED);
 
-        ReservationParticipation participation = new ReservationParticipation(participatedReservation, customer);
-
         when(customerService.getCustomerById(1L)).thenReturn(customer);
-        when(reservationService.getReservationsForCustomer(1L)).thenReturn(List.of());
-        when(participationService.getUserParticipations(1L)).thenReturn(List.of(participation));
+        when(reservationService.getAllReservationsForCustomer(1L)).thenReturn(List.of(participatedReservation));
 
         ResponseEntity<List<ReservationDetailsDTO>> response = reservationController.getMyReservations(customer);
 
