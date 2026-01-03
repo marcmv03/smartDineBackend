@@ -27,15 +27,15 @@ import com.smartDine.dto.UpdateReservationStatusDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
+import com.smartDine.entity.ReservationParticipation;
 import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
-import com.smartDine.entity.ReservationParticipation;
 import com.smartDine.entity.TimeSlot;
 import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.services.CustomerService;
-import com.smartDine.services.ReservationService;
 import com.smartDine.services.ReservationParticipationService;
+import com.smartDine.services.ReservationService;
 
 @ExtendWith(MockitoExtension.class)
 class ReservationControllerTest {
