@@ -83,7 +83,7 @@ public class ProfileDTO {
         return dto;
     }
     
-    public static List<ProfileDTO> fromEntity(List<User> users) {
+    public static List<ProfileDTO> fromEntity(List<? extends User> users) {
         return users.stream()
             .map(ProfileDTO::fromEntity)
             .collect(Collectors.toList());

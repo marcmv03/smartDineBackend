@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.smartDine.dto.ProfileDTO;
 import com.smartDine.dto.ReservationDTO;
 import com.smartDine.dto.ReservationDetailsDTO;
 import com.smartDine.dto.RestaurantReservationDTO;
@@ -112,6 +113,24 @@ public class ReservationController {
         Business business = (Business) user;
         List<Reservation> reservations = reservationService.getReservationsByRestaurantAndDate(id, date, business);
         List<RestaurantReservationDTO> response = RestaurantReservationDTO.fromEntity(reservations);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/reservations/{id}/participants")
+    public ResponseEntity<List<ProfileDTO>> getReservationParticipants(
+        @PathVariable Long id,
+        @AuthenticationPrincipal User user
+    ) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (user.getRole() != Role.ROLE_CUSTOMER) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Customer customer = customerService.getCustomerById(user.getId());
+        List<Customer> participants = reservationService.getReservationParticipants(id, customer.getId());
+        List<ProfileDTO> response = ProfileDTO.fromEntity(participants);
         return ResponseEntity.ok(response);
     }
 }

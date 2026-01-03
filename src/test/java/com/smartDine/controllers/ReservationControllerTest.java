@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 
+import com.smartDine.dto.ProfileDTO;
 import com.smartDine.dto.ReservationDTO;
 import com.smartDine.dto.ReservationDetailsDTO;
 import com.smartDine.dto.RestaurantReservationDTO;
@@ -348,4 +349,61 @@ class ReservationControllerTest {
             reservationController.updateReservationStatus(40L, dto, customer)
         );
     }
+
+    @Test
+    void getReservationParticipants_OwnerAccess_ReturnsParticipantList() {
+        Customer participant1 = new Customer();
+        participant1.setId(2L);
+        participant1.setEmail("participant1@test.com");
+        participant1.setName("Participant 1");
+        participant1.setPhoneNumber(111111111L);
+
+        Customer participant2 = new Customer();
+        participant2.setId(3L);
+        participant2.setEmail("participant2@test.com");
+        participant2.setName("Participant 2");
+        participant2.setPhoneNumber(222222222L);
+
+        List<Customer> participants = List.of(participant1, participant2);
+
+        when(customerService.getCustomerById(1L)).thenReturn(customer);
+        when(reservationService.getReservationParticipants(40L, 1L)).thenReturn(participants);
+
+        ResponseEntity<List<ProfileDTO>> response = reservationController.getReservationParticipants(40L, customer);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(2, response.getBody().size());
+        assertEquals("Participant 1", response.getBody().get(0).getName());
+        assertEquals("participant1@test.com", response.getBody().get(0).getEmail());
+    }
+
+    @Test
+    void getReservationParticipants_NullUser_ReturnsUnauthorized() {
+        ResponseEntity<List<ProfileDTO>> response = reservationController.getReservationParticipants(40L, null);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    @Test
+    void getReservationParticipants_NotCustomerRole_ReturnsForbidden() {
+        Business business = new Business();
+        business.setId(5L);
+
+        ResponseEntity<List<ProfileDTO>> response = reservationController.getReservationParticipants(40L, business);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
+
+    @Test
+    void getReservationParticipants_NotOwnerOrParticipant_ThrowsException() {
+        when(customerService.getCustomerById(1L)).thenReturn(customer);
+        when(reservationService.getReservationParticipants(40L, 1L))
+            .thenThrow(new BadCredentialsException("You are not authorized to view participants of this reservation"));
+
+        assertThrows(BadCredentialsException.class, () ->
+            reservationController.getReservationParticipants(40L, customer)
+        );
+    }
 }
+

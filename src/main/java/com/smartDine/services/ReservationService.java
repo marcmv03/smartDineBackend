@@ -339,5 +339,34 @@ public class ReservationService {
         return participations.stream()
             .map(ReservationParticipation::getReservation)
             .toList();
+    }
+
+    /**
+     * Gets all participants (customers) of a specific reservation.
+     * Only the reservation owner or participants can access this information.
+     * 
+     * @param reservationId The ID of the reservation
+     * @param requestingUserId The ID of the user making the request
+     * @return List of Customer entities who are participants (excludes the owner)
+     * @throws IllegalArgumentException if reservation not found
+     * @throws BadCredentialsException if requesting user is not owner or participant
+     */
+    @Transactional(readOnly = true)
+    public List<Customer> getReservationParticipants(Long reservationId, Long requestingUserId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+            .orElseThrow(() -> new IllegalArgumentException("Reservation not found with id: " + reservationId));
+
+        // Check if requesting user is the owner
+        boolean isOwner = reservation.getCustomer().getId().equals(requestingUserId);
+        
+        // Check if requesting user is a participant
+        boolean isParticipant = reservationParticipationService.isParticipant(requestingUserId, reservationId);
+
+        if (!isOwner && !isParticipant) {
+            throw new BadCredentialsException("You are not authorized to view participants of this reservation");
+        }
+
+        return reservationParticipationService.getParticipantCustomers(reservationId);
+    }
 }
-}
+

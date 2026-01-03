@@ -94,4 +94,24 @@ public class ReservationParticipationService {
     public boolean isParticipant(Long userId, Long reservationId) {
         return participationRepository.existsByReservationIdAndCustomerId(reservationId, userId);
     }
+
+    /**
+     * Gets all customers who are participants of a specific reservation.
+     * Does not include the reservation owner.
+     * 
+     * @param reservationId The ID of the reservation
+     * @return List of Customer entities who are participants
+     * @throws IllegalArgumentException if reservation not found
+     */
+    @Transactional(readOnly = true)
+    public List<Customer> getParticipantCustomers(Long reservationId) {
+        if (!reservationRepository.existsById(reservationId)) {
+            throw new IllegalArgumentException("Reservation not found with id: " + reservationId);
+        }
+        
+        List<ReservationParticipation> participations = participationRepository.findByReservationId(reservationId);
+        return participations.stream()
+                .map(ReservationParticipation::getCustomer)
+                .collect(java.util.stream.Collectors.toList());
+    }
 }
