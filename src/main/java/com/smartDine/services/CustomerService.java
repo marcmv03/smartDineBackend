@@ -115,4 +115,16 @@ public class CustomerService  {
         }
         return clientsRepository.findByNameContainingIgnoreCase(search);
     }
+
+    /**
+     * Searches for customers by name, excluding a specific user from results.
+     * Used for customer search functionality where the authenticated user should not appear.
+     *
+     * @param name The name or part of the name to search for.
+     * @param excludeUserId The ID of the user to exclude from results (typically the authenticated user).
+     * @return A list of matching customers.
+     */
+    public List<Customer> searchCustomers(String name, Long excludeUserId) {
+        return clientsRepository.findByNameContainingIgnoreCaseAndIdNot(name, excludeUserId);
+    }
 }

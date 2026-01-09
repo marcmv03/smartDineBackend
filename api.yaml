@@ -31,6 +31,8 @@ tags:
     description: Manage communities and members.
   - name: Friends
     description: Manage friendships and friend requests.
+  - name: Customers
+    description: Search for customers.
   - name: Notifications
     description: User notifications for friend requests and other events.
 paths:
@@ -1024,6 +1026,49 @@ paths:
           description: Forbidden - only customers can remove friends
         '404':
           description: User not found
+
+  # ==================== CUSTOMERS ====================
+  /smartdine/api/customers:
+    get:
+      tags:
+        - Customers
+      summary: Search for customers by name
+      description: |
+        Search for customers by name (case-insensitive, partial match).
+        The authenticated user is excluded from results.
+        Results include friendship status and pending request information.
+        Minimum 2 characters required for the search term.
+      operationId: searchCustomers
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: name
+          required: true
+          schema:
+            type: string
+            minLength: 2
+          description: Search term to filter by name (minimum 2 characters)
+          example: "juan"
+      responses:
+        '200':
+          description: List of customers matching the search criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomerSearchResult'
+        '400':
+          description: Bad request - search term too short (less than 2 characters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - authentication required
+        '403':
+          description: Forbidden - only customers can search for other customers
 
   # ==================== NOTIFICATIONS ====================
   /smartdine/api/users/me/notifications:
@@ -2150,6 +2195,28 @@ components:
           type: string
           format: date-time
           description: When the friendship was created
+
+    # ==================== CUSTOMER SCHEMAS ====================
+    CustomerSearchResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Customer ID
+        name:
+          type: string
+          description: Customer name
+        email:
+          type: string
+          format: email
+          description: Customer email
+        isFriend:
+          type: boolean
+          description: Whether the authenticated user is already friends with this customer
+        hasPendingRequest:
+          type: boolean
+          description: Whether there's a pending friend request between the users (in either direction)
 
     # ==================== NOTIFICATIONS SCHEMAS ====================
     Notification:

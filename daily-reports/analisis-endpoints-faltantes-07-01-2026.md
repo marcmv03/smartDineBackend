@@ -2,7 +2,8 @@
 **SmartDine Backend - API REST**
 
 **Fecha:** 07 de enero de 2026
-**Versión:** 1.0
+**Última Actualización:** 09 de enero de 2026
+**Versión:** 1.1
 **Analista:** Arquitectura de Software
 **Archivo Analizado:** `api.yaml`
 
@@ -10,21 +11,21 @@
 
 ## 📊 RESUMEN EJECUTIVO
 
-Se ha realizado un análisis exhaustivo del archivo `api.yaml` comparándolo con las 5 funcionalidades requeridas para la aplicación móvil. Se han identificado **8 endpoints faltantes críticos** que bloquean la implementación completa de las funcionalidades especificadas.
+Se ha realizado un análisis exhaustivo del archivo `api.yaml` comparándolo con las 5 funcionalidades requeridas para la aplicación móvil. Se han identificado **6 endpoints faltantes críticos** que bloquean la implementación completa de las funcionalidades especificadas.
 
 ### Estado de Implementación por Funcionalidad
 
 | Funcionalidad | Endpoints Existentes | Endpoints Faltantes | Estado |
 |--------------|---------------------|---------------------|--------|
-| 1. Búsqueda de usuarios y peticiones de amistad | 2/3 | 1 | 🟡 67% |
+| 1. Búsqueda de usuarios y peticiones de amistad | 3/3 | 0 | ✅ 100% |
 | 2. Notificaciones y gestión de solicitudes | 4/4 | 0 | ✅ 100% |
 | 3. Añadir amigos a reservas como participantes | 0/2 | 2 | 🔴 0% |
 | 4. Solicitar unirse a comunidad privada | 0/3 | 3 | 🔴 0% |
 | 5. Eliminar amigos y participantes | 1/2 | 1 | 🟡 50% |
 
 **Resumen General:**
-- ✅ **Endpoints Implementados:** 7/14 (50%)
-- 🔴 **Endpoints Faltantes Críticos:** 7/14 (50%)
+- ✅ **Endpoints Implementados:** 8/14 (57%)
+- 🔴 **Endpoints Faltantes Críticos:** 6/14 (43%)
 
 ---
 
@@ -37,15 +38,61 @@ Se ha realizado un análisis exhaustivo del archivo `api.yaml` comparándolo con
 ### Descripción
 Un usuario debe poder buscar otros usuarios del sistema y enviarles peticiones de amistad.
 
-### ✅ Endpoints Existentes (2/3)
+### ✅ Estado: 100% IMPLEMENTADO (Actualizado 09/01/2026)
 
-#### 1.1 Enviar Petición de Amistad
+#### 1.1 ✅ Buscar Customers
 ```yaml
-POST /smartdine/api/users/{id}/friend-requests
+GET /smartdine/api/customers?name=X
 ```
 **Estado:** ✅ IMPLEMENTADO
-**Ubicación en api.yaml:** Líneas 836-874
-**Implementado en:** `FriendController.java:52-67`
+**Ubicación en api.yaml:** Sección Customers
+**Implementado en:** `CustomerController.java`
+
+**Parámetros:**
+- `name` (query, required): Término de búsqueda (mínimo 2 caracteres)
+
+**Respuesta:**
+```json
+[
+  {
+    "id": 42,
+    "name": "Juan Martínez",
+    "email": "juan.martinez@example.com",
+    "isFriend": false,
+    "hasPendingRequest": false
+  },
+  {
+    "id": 88,
+    "name": "Juana Pérez",
+    "email": "juana@example.com",
+    "isFriend": true,
+    "hasPendingRequest": false
+  }
+]
+```
+
+**Características implementadas:**
+- ✅ Búsqueda case-insensitive por nombre (coincidencias parciales)
+- ✅ Mínimo 2 caracteres requeridos
+- ✅ Excluye al usuario autenticado de los resultados
+- ✅ Incluye campo `isFriend` indicando si ya son amigos
+- ✅ Incluye campo `hasPendingRequest` indicando si hay solicitud pendiente
+- ✅ Solo usuarios con rol CUSTOMER pueden buscar
+
+#### 1.2 ✅ Enviar Petición de Amistad
+```yaml
+POST /smartdine/api/requests
+```
+**Estado:** ✅ IMPLEMENTADO
+**Implementado en:** `RequestController.java`
+
+**Request Body:**
+```json
+{
+  "userId": 42,
+  "requestType": "FRIEND_REQUEST"
+}
+```
 
 **Respuesta:**
 ```json
@@ -64,17 +111,16 @@ POST /smartdine/api/users/{id}/friend-requests
 **Validaciones implementadas:**
 - ✅ Usuario autenticado (Bearer token)
 - ✅ Solo usuarios con rol CUSTOMER pueden enviar peticiones
-- ✅ No puede enviar petición a sí mismo
-- ✅ No permite peticiones duplicadas pendientes
-- ✅ No permite peticiones si ya son amigos
+- ✅ No puede enviar petición a sí mismo (retorna 409)
+- ✅ No permite peticiones duplicadas pendientes (retorna 409)
+- ✅ No permite peticiones si ya son amigos (retorna 409)
 
-#### 1.2 Obtener Peticiones Pendientes Recibidas
+#### 1.3 ✅ Obtener Peticiones Pendientes Recibidas
 ```yaml
-GET /smartdine/api/users/me/friend-requests
+GET /smartdine/api/me/requests
 ```
 **Estado:** ✅ IMPLEMENTADO
-**Ubicación en api.yaml:** Líneas 876-896
-**Implementado en:** `FriendController.java:73-86`
+**Implementado en:** `RequestController.java`
 
 **Respuesta:**
 ```json
@@ -83,7 +129,6 @@ GET /smartdine/api/users/me/friend-requests
     "id": 123,
     "senderId": 5,
     "senderName": "Carlos López",
-    "senderEmail": "carlos@example.com",
     "receiverId": 1,
     "receiverName": "Juan Pérez",
     "requestType": "FRIEND_REQUEST",
@@ -91,147 +136,6 @@ GET /smartdine/api/users/me/friend-requests
     "createdAt": "2026-01-07T09:15:00"
   }
 ]
-```
-
----
-
-### 🔴 Endpoints Faltantes (1/3)
-
-#### 1.3 🔴 FALTANTE: Buscar Usuarios
-```yaml
-GET /smartdine/api/users/search
-```
-
-**Prioridad:** 🔴 CRÍTICA
-**Bloquea:** Funcionalidad completa de búsqueda de usuarios
-
-**Propuesta de Especificación:**
-
-```yaml
-/smartdine/api/users/search:
-  get:
-    tags:
-      - Users
-    summary: Search for users by name or email
-    operationId: searchUsers
-    security:
-      - bearerAuth: []
-    parameters:
-      - in: query
-        name: query
-        required: true
-        schema:
-          type: string
-          minLength: 3
-        description: Search term (minimum 3 characters) to filter by name or email
-        example: "juan"
-      - in: query
-        name: page
-        required: false
-        schema:
-          type: integer
-          default: 0
-        description: Page number for pagination
-      - in: query
-        name: size
-        required: false
-        schema:
-          type: integer
-          default: 20
-          maximum: 100
-        description: Number of results per page
-    responses:
-      '200':
-        description: List of users matching the search criteria
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                users:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/UserSearchResult'
-                totalElements:
-                  type: integer
-                totalPages:
-                  type: integer
-                currentPage:
-                  type: integer
-      '400':
-        description: Bad request - search term too short
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ErrorResponse'
-      '401':
-        description: Unauthorized - authentication required
-      '403':
-        description: Forbidden - only customers can search users
-```
-
-**Schema Requerido:**
-```yaml
-UserSearchResult:
-  type: object
-  properties:
-    id:
-      type: integer
-      format: int64
-    name:
-      type: string
-    email:
-      type: string
-      format: email
-    isFriend:
-      type: boolean
-      description: Whether the authenticated user is already friends with this user
-    hasPendingRequest:
-      type: boolean
-      description: Whether there's a pending friend request between the users
-```
-
-**Ejemplo de Respuesta:**
-```json
-{
-  "users": [
-    {
-      "id": 42,
-      "name": "Juan Martínez",
-      "email": "juan.martinez@example.com",
-      "isFriend": false,
-      "hasPendingRequest": false
-    },
-    {
-      "id": 88,
-      "name": "Juana Pérez",
-      "email": "juana@example.com",
-      "isFriend": true,
-      "hasPendingRequest": false
-    }
-  ],
-  "totalElements": 15,
-  "totalPages": 1,
-  "currentPage": 0
-}
-```
-
-**Consideraciones de Implementación:**
-1. **Búsqueda:** Case-insensitive, buscar en `name` y `email`
-2. **Filtros:** Excluir al usuario autenticado de los resultados
-3. **Privacidad:** Solo mostrar usuarios con rol CUSTOMER
-4. **Performance:** Indexar columnas `name` y `email` en la base de datos
-5. **Paginación:** Implementar usando Spring Data `Pageable`
-
-**Query Repository Sugerida:**
-```java
-@Query("SELECT c FROM Customer c WHERE " +
-       "LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-       "LOWER(c.email) LIKE LOWER(CONCAT('%', :query, '%')) " +
-       "AND c.id != :excludeId")
-Page<Customer> searchCustomers(@Param("query") String query,
-                                @Param("excludeId") Long excludeId,
-                                Pageable pageable);
 ```
 
 ---
@@ -1010,11 +914,11 @@ DELETE /smartdine/api/reservations/{reservationId}/participants/me
 
 ## 📊 RESUMEN DE ENDPOINTS FALTANTES
 
-### 🔴 Prioridad CRÍTICA (7 endpoints)
+### 🔴 Prioridad CRÍTICA (6 endpoints)
 
 | # | Método | Endpoint | Funcionalidad Bloqueada |
 |---|--------|----------|------------------------|
-| 1 | GET | `/smartdine/api/users/search` | Búsqueda de usuarios |
+| ~~1~~ | ~~GET~~ | ~~`/smartdine/api/customers?name=X`~~ | ~~Búsqueda de usuarios~~ ✅ IMPLEMENTADO |
 | 2 | POST | `/smartdine/api/reservations/{id}/participants` | Añadir amigos a reservas |
 | 3 | GET | `/smartdine/api/reservations/{id}/eligible-friends` | UX añadir participantes |
 | 4 | POST | `/smartdine/api/communities/{id}/join-requests` | Solicitar unirse a comunidad |
@@ -1031,13 +935,14 @@ DELETE /smartdine/api/reservations/{reservationId}/participants/me
 
 **Objetivo:** Completar funcionalidades 1, 3 y 5
 
-#### Semana 1 - Día 1-2: Búsqueda de Usuarios
-- [ ] Crear endpoint `GET /users/search`
-- [ ] Implementar `UserSearchResult` DTO
-- [ ] Añadir query method en `CustomerRepository`
-- [ ] Implementar lógica en `CustomerService`
-- [ ] Tests unitarios e integración
-- [ ] Documentar en api.yaml
+#### ✅ Semana 1 - Día 1-2: Búsqueda de Usuarios (COMPLETADO 09/01/2026)
+- [x] Crear endpoint `GET /customers?name=X`
+- [x] Implementar `CustomerSearchDTO`
+- [x] Añadir query method en `CustomerRepository`
+- [x] Implementar lógica en `CustomerService`
+- [x] Añadir método `hasPendingRequestBetween` en `FriendshipRequestService`
+- [x] Tests unitarios (13 tests)
+- [x] Documentar en api.yaml
 
 #### Semana 1 - Día 3-5: Participantes en Reservas
 - [ ] Crear endpoint `POST /reservations/{id}/participants`

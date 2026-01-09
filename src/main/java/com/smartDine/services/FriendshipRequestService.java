@@ -125,4 +125,21 @@ public class FriendshipRequestService extends RequestService {
     public List<Request> getPendingFriendRequests(com.smartDine.entity.User user) {
         return getPendingRequests(user);
     }
+
+    /**
+     * Checks if there is a pending friend request between two customers (in either direction).
+     * 
+     * @param customer1 First customer
+     * @param customer2 Second customer
+     * @return true if there's a pending request between them
+     */
+    @Transactional(readOnly = true)
+    public boolean hasPendingRequestBetween(Customer customer1, Customer customer2) {
+        boolean pendingFromFirstToSecond = requestRepository.existsBySenderAndReceiverAndRequestTypeAndStatus(
+                customer1, customer2, RequestType.FRIEND_REQUEST, RequestStatus.PENDING);
+        boolean pendingFromSecondToFirst = requestRepository.existsBySenderAndReceiverAndRequestTypeAndStatus(
+                customer2, customer1, RequestType.FRIEND_REQUEST, RequestStatus.PENDING);
+        
+        return pendingFromFirstToSecond || pendingFromSecondToFirst;
+    }
 }
