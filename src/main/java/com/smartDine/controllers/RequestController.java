@@ -10,11 +10,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.smartDine.dto.FriendDTO;
+import com.smartDine.dto.RequestCreationDTO;
 import com.smartDine.dto.RequestDTO;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Friendship;
@@ -26,6 +27,8 @@ import com.smartDine.services.CustomerService;
 import com.smartDine.services.FriendshipRequestService;
 import com.smartDine.services.FriendshipService;
 import com.smartDine.services.RequestService;
+
+import jakarta.validation.Valid;
 
 /**
  * Controller for managing requests (friend requests, community invites, etc.).
@@ -75,17 +78,15 @@ public class RequestController {
 
     /**
      * Send a request to another user.
-     * POST /users/{id}/requests?type=FRIEND_REQUEST
+     * POST /requests
      * 
-     * @param id The target user ID
-     * @param type The type of request to send (defaults to FRIEND_REQUEST)
+     * @param requestCreationDTO The request data containing userId and requestType
      * @param user The authenticated user
      * @return The created request
      */
-    @PostMapping("/users/{id}/requests")
+    @PostMapping("/requests")
     public ResponseEntity<RequestDTO> sendRequest(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "FRIEND_REQUEST") RequestType type,
+            @Valid @RequestBody RequestCreationDTO requestCreationDTO,
             @AuthenticationPrincipal User user
     ) {
         if (user == null) {
@@ -98,10 +99,10 @@ public class RequestController {
         Customer sender = customerService.getCustomerById(user.getId());
         
         Request request;
-        if (type == RequestType.FRIEND_REQUEST) {
-            request = friendshipRequestService.sendFriendRequest(sender, id);
+        if (requestCreationDTO.getRequestType() == RequestType.FRIEND_REQUEST) {
+            request = friendshipRequestService.sendFriendRequest(sender, requestCreationDTO.getUserId());
         } else {
-            throw new IllegalArgumentException("Request type not supported: " + type);
+            throw new IllegalArgumentException("Request type not supported: " + requestCreationDTO.getRequestType());
         }
         
         return ResponseEntity.status(HttpStatus.CREATED).body(RequestDTO.fromEntity(request));
@@ -109,15 +110,15 @@ public class RequestController {
 
     /**
      * Get pending requests received by the authenticated user.
-     * GET /me/requests?type=FRIEND_REQUEST
+    /**
+     * Get pending requests received by the authenticated user.
+     * GET /me/requests
      * 
-     * @param type The type of requests to retrieve (defaults to FRIEND_REQUEST)
      * @param user The authenticated user
-     * @return List of pending requests
+     * @return List of all pending requests (all types)
      */
     @GetMapping("/me/requests")
     public ResponseEntity<List<RequestDTO>> getPendingRequests(
-            @RequestParam(defaultValue = "FRIEND_REQUEST") RequestType type,
             @AuthenticationPrincipal User user
     ) {
         if (user == null) {
@@ -127,8 +128,9 @@ public class RequestController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        RequestService service = getServiceForType(type);
-        List<Request> requests = service.getPendingRequests(user);
+        // For now, only return friend requests
+        // In the future, this could be extended to return all request types
+        List<Request> requests = friendshipRequestService.getPendingRequests(user);
         return ResponseEntity.ok(RequestDTO.fromEntity(requests));
     }
 

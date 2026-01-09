@@ -11,8 +11,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.doNothing;
@@ -24,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import com.smartDine.dto.FriendDTO;
+import com.smartDine.dto.RequestCreationDTO;
 import com.smartDine.dto.RequestDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
@@ -31,7 +30,6 @@ import com.smartDine.entity.Friendship;
 import com.smartDine.entity.Request;
 import com.smartDine.entity.RequestStatus;
 import com.smartDine.entity.RequestType;
-import com.smartDine.entity.Role;
 import com.smartDine.exceptions.DuplicateFriendRequestException;
 import com.smartDine.exceptions.FriendshipAlreadyExistsException;
 import com.smartDine.exceptions.FriendshipNotFoundException;
@@ -90,13 +88,17 @@ class RequestControllerTest {
 
     // ========== Send Request Tests ==========
     @Nested
-    @DisplayName("Send Request - POST /users/{id}/requests")
+    @DisplayName("Send Request - POST /requests")
     class SendRequestTests {
 
         @Test
         @DisplayName("Should return UNAUTHORIZED when user is null")
         void sendRequestUnauthorized() {
-            ResponseEntity<RequestDTO> response = requestController.sendRequest(2L, RequestType.FRIEND_REQUEST, null);
+            RequestCreationDTO requestDTO = new RequestCreationDTO();
+            requestDTO.setUserId(2L);
+            requestDTO.setRequestType(RequestType.FRIEND_REQUEST);
+
+            ResponseEntity<RequestDTO> response = requestController.sendRequest(requestDTO, null);
 
             assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         }
@@ -104,7 +106,11 @@ class RequestControllerTest {
         @Test
         @DisplayName("Should return FORBIDDEN when user is Business")
         void sendRequestForbiddenForBusiness() {
-            ResponseEntity<RequestDTO> response = requestController.sendRequest(2L, RequestType.FRIEND_REQUEST, business);
+            RequestCreationDTO requestDTO = new RequestCreationDTO();
+            requestDTO.setUserId(2L);
+            requestDTO.setRequestType(RequestType.FRIEND_REQUEST);
+
+            ResponseEntity<RequestDTO> response = requestController.sendRequest(requestDTO, business);
 
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         }
@@ -112,10 +118,14 @@ class RequestControllerTest {
         @Test
         @DisplayName("Should return CREATED when friend request is sent successfully")
         void sendFriendRequestSuccess() {
+            RequestCreationDTO requestDTO = new RequestCreationDTO();
+            requestDTO.setUserId(2L);
+            requestDTO.setRequestType(RequestType.FRIEND_REQUEST);
+
             when(customerService.getCustomerById(1L)).thenReturn(customer);
             when(friendshipRequestService.sendFriendRequest(customer, 2L)).thenReturn(friendRequest);
 
-            ResponseEntity<RequestDTO> response = requestController.sendRequest(2L, RequestType.FRIEND_REQUEST, customer);
+            ResponseEntity<RequestDTO> response = requestController.sendRequest(requestDTO, customer);
 
             assertEquals(HttpStatus.CREATED, response.getStatusCode());
             assertNotNull(response.getBody());
@@ -126,12 +136,16 @@ class RequestControllerTest {
         @Test
         @DisplayName("Should propagate SelfFriendRequestException")
         void sendFriendRequestToSelf() {
+            RequestCreationDTO requestDTO = new RequestCreationDTO();
+            requestDTO.setUserId(1L);
+            requestDTO.setRequestType(RequestType.FRIEND_REQUEST);
+
             when(customerService.getCustomerById(1L)).thenReturn(customer);
             when(friendshipRequestService.sendFriendRequest(customer, 1L))
                     .thenThrow(new SelfFriendRequestException());
 
             try {
-                requestController.sendRequest(1L, RequestType.FRIEND_REQUEST, customer);
+                requestController.sendRequest(requestDTO, customer);
             } catch (SelfFriendRequestException e) {
                 // Expected
             }
@@ -140,12 +154,16 @@ class RequestControllerTest {
         @Test
         @DisplayName("Should propagate DuplicateFriendRequestException")
         void sendDuplicateFriendRequest() {
+            RequestCreationDTO requestDTO = new RequestCreationDTO();
+            requestDTO.setUserId(2L);
+            requestDTO.setRequestType(RequestType.FRIEND_REQUEST);
+
             when(customerService.getCustomerById(1L)).thenReturn(customer);
             when(friendshipRequestService.sendFriendRequest(customer, 2L))
                     .thenThrow(new DuplicateFriendRequestException());
 
             try {
-                requestController.sendRequest(2L, RequestType.FRIEND_REQUEST, customer);
+                requestController.sendRequest(requestDTO, customer);
             } catch (DuplicateFriendRequestException e) {
                 // Expected
             }
@@ -154,12 +172,16 @@ class RequestControllerTest {
         @Test
         @DisplayName("Should propagate FriendshipAlreadyExistsException")
         void sendFriendRequestWhenAlreadyFriends() {
+            RequestCreationDTO requestDTO = new RequestCreationDTO();
+            requestDTO.setUserId(2L);
+            requestDTO.setRequestType(RequestType.FRIEND_REQUEST);
+
             when(customerService.getCustomerById(1L)).thenReturn(customer);
             when(friendshipRequestService.sendFriendRequest(customer, 2L))
                     .thenThrow(new FriendshipAlreadyExistsException());
 
             try {
-                requestController.sendRequest(2L, RequestType.FRIEND_REQUEST, customer);
+                requestController.sendRequest(requestDTO, customer);
             } catch (FriendshipAlreadyExistsException e) {
                 // Expected
             }
@@ -174,7 +196,7 @@ class RequestControllerTest {
         @Test
         @DisplayName("Should return UNAUTHORIZED when user is null")
         void getPendingRequestsUnauthorized() {
-            ResponseEntity<List<RequestDTO>> response = requestController.getPendingRequests(RequestType.FRIEND_REQUEST, null);
+            ResponseEntity<List<RequestDTO>> response = requestController.getPendingRequests(null);
 
             assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         }
@@ -182,7 +204,7 @@ class RequestControllerTest {
         @Test
         @DisplayName("Should return FORBIDDEN when user is Business")
         void getPendingRequestsForbiddenForBusiness() {
-            ResponseEntity<List<RequestDTO>> response = requestController.getPendingRequests(RequestType.FRIEND_REQUEST, business);
+            ResponseEntity<List<RequestDTO>> response = requestController.getPendingRequests(business);
 
             assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         }
@@ -192,7 +214,7 @@ class RequestControllerTest {
         void getPendingRequestsEmpty() {
             when(friendshipRequestService.getPendingRequests(customer)).thenReturn(Collections.emptyList());
 
-            ResponseEntity<List<RequestDTO>> response = requestController.getPendingRequests(RequestType.FRIEND_REQUEST, customer);
+            ResponseEntity<List<RequestDTO>> response = requestController.getPendingRequests(customer);
 
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertNotNull(response.getBody());
@@ -206,7 +228,7 @@ class RequestControllerTest {
             incomingRequest.setId(11L);
             when(friendshipRequestService.getPendingRequests(customer)).thenReturn(List.of(incomingRequest));
 
-            ResponseEntity<List<RequestDTO>> response = requestController.getPendingRequests(RequestType.FRIEND_REQUEST, customer);
+            ResponseEntity<List<RequestDTO>> response = requestController.getPendingRequests(customer);
 
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertNotNull(response.getBody());
