@@ -19,12 +19,17 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.smartDine.dto.ErrorDTO;
 import com.smartDine.dto.QueryParameterErrorDTO;
 import com.smartDine.dto.ValidationErrorDTO;
+import com.smartDine.exceptions.DuplicateFriendRequestException;
 import com.smartDine.exceptions.DuplicateUserException;
 import com.smartDine.exceptions.ExpiredOpenReservationException;
+import com.smartDine.exceptions.FriendshipAlreadyExistsException;
+import com.smartDine.exceptions.FriendshipNotFoundException;
 import com.smartDine.exceptions.IllegalReservationStateChangeException;
 import com.smartDine.exceptions.MissingQueryParamException;
 import com.smartDine.exceptions.NoUserIsMemberException;
+import com.smartDine.exceptions.NotRequestReceiverException;
 import com.smartDine.exceptions.RelatedEntityException;
+import com.smartDine.exceptions.SelfFriendRequestException;
 
 import io.jsonwebtoken.ExpiredJwtException; 
 
@@ -224,5 +229,70 @@ public class GlobalExceptionHandler {
             ex.getMessage()
         );
         return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Handle self friend request (409 Conflict)
+     * Thrown when a user tries to send a friend request to themselves
+     */
+    @ExceptionHandler(SelfFriendRequestException.class)
+    public ResponseEntity<ErrorDTO> handleSelfFriendRequest(SelfFriendRequestException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.CONFLICT.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Handle duplicate friend request (409 Conflict)
+     * Thrown when a pending friend request already exists
+     */
+    @ExceptionHandler(DuplicateFriendRequestException.class)
+    public ResponseEntity<ErrorDTO> handleDuplicateFriendRequest(DuplicateFriendRequestException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.CONFLICT.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Handle friendship already exists (409 Conflict)
+     * Thrown when trying to befriend someone who is already a friend
+     */
+    @ExceptionHandler(FriendshipAlreadyExistsException.class)
+    public ResponseEntity<ErrorDTO> handleFriendshipAlreadyExists(FriendshipAlreadyExistsException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.CONFLICT.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Handle not request receiver (403 Forbidden)
+     * Thrown when a user tries to accept/reject a request they are not the receiver of
+     */
+    @ExceptionHandler(NotRequestReceiverException.class)
+    public ResponseEntity<ErrorDTO> handleNotRequestReceiver(NotRequestReceiverException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.FORBIDDEN.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * Handle friendship not found (404 Not Found)
+     * Thrown when trying to remove a friendship that doesn't exist
+     */
+    @ExceptionHandler(FriendshipNotFoundException.class)
+    public ResponseEntity<ErrorDTO> handleFriendshipNotFound(FriendshipNotFoundException ex) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.NOT_FOUND.value(),
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorDTO, HttpStatus.NOT_FOUND);
     }
 }

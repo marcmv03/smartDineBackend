@@ -29,6 +29,10 @@ tags:
     description: Upload and retrieve images for restaurants and menu items.
   - name: Communities
     description: Manage communities and members.
+  - name: Friends
+    description: Manage friendships and friend requests.
+  - name: Notifications
+    description: User notifications for friend requests and other events.
 paths:
   /smartdine/api/communities/{id}/members:
     get:
@@ -827,6 +831,256 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== FRIENDS ====================
+  /smartdine/api/users/{id}/friend-requests:
+    post:
+      tags:
+        - Friends
+      summary: Send a friend request to another user
+      operationId: sendFriendRequest
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the user to send the friend request to
+      responses:
+        '201':
+          description: Friend request sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendRequest'
+        '400':
+          description: |
+            Bad request - one of the following:
+            - Cannot send friend request to yourself
+            - A pending friend request already exists
+            - You are already friends with this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - only customers can send friend requests
+        '404':
+          description: User not found
+
+  /smartdine/api/users/me/friend-requests:
+    get:
+      tags:
+        - Friends
+      summary: Get pending friend requests received by the authenticated user
+      operationId: getPendingFriendRequests
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of pending friend requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FriendRequest'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - only customers can view friend requests
+
+  /smartdine/api/friend-requests/{id}/accept:
+    post:
+      tags:
+        - Friends
+      summary: Accept a friend request
+      operationId: acceptFriendRequest
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the friend request to accept
+      responses:
+        '200':
+          description: Friend request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendRequest'
+        '400':
+          description: |
+            Bad request - one of the following:
+            - Request not found
+            - You are not the receiver of this request
+            - Request is not pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - only customers can accept friend requests
+
+  /smartdine/api/friend-requests/{id}/reject:
+    post:
+      tags:
+        - Friends
+      summary: Reject a friend request
+      operationId: rejectFriendRequest
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the friend request to reject
+      responses:
+        '200':
+          description: Friend request rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendRequest'
+        '400':
+          description: |
+            Bad request - one of the following:
+            - Request not found
+            - You are not the receiver of this request
+            - Request is not pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - only customers can reject friend requests
+
+  /smartdine/api/users/me/friends:
+    get:
+      tags:
+        - Friends
+      summary: Get the list of friends for the authenticated user
+      operationId: getMyFriends
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of friends
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Friend'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - only customers can have friends
+
+  /smartdine/api/friends/{friendId}:
+    delete:
+      tags:
+        - Friends
+      summary: Remove a friend
+      operationId: removeFriend
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: friendId
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the friend to remove
+      responses:
+        '204':
+          description: Friend removed successfully
+        '400':
+          description: You are not friends with this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - only customers can remove friends
+        '404':
+          description: User not found
+
+  # ==================== NOTIFICATIONS ====================
+  /smartdine/api/users/me/notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Get all notifications for the authenticated user
+      operationId: getMyNotifications
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of notifications (ordered by date, newest first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '401':
+          description: Unauthorized
+
+  /smartdine/api/notifications/{id}/read:
+    post:
+      tags:
+        - Notifications
+      summary: Mark a notification as read
+      operationId: markNotificationAsRead
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the notification to mark as read
+      responses:
+        '200':
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '400':
+          description: |
+            Bad request - one of the following:
+            - Notification not found
+            - You are not the receiver of this notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+
   /smartdine/api/communities/{communityId}/posts:
     get:
       tags:
@@ -1841,3 +2095,78 @@ components:
           type: number
           format: double
           description: End time as decimal (e.g., 14.0 = 14:00)
+
+    # ==================== FRIENDS SCHEMAS ====================
+    FriendRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        senderId:
+          type: integer
+          format: int64
+        senderName:
+          type: string
+        senderEmail:
+          type: string
+          format: email
+        receiverId:
+          type: integer
+          format: int64
+        receiverName:
+          type: string
+        requestType:
+          type: string
+          enum:
+            - FRIEND_REQUEST
+        status:
+          type: string
+          enum:
+            - PENDING
+            - ACCEPTED
+            - REJECTED
+        createdAt:
+          type: string
+          format: date-time
+
+    Friend:
+      type: object
+      properties:
+        friendshipId:
+          type: integer
+          format: int64
+          description: ID of the friendship relationship
+        friendId:
+          type: integer
+          format: int64
+          description: ID of the friend (the other user)
+        friendName:
+          type: string
+        friendEmail:
+          type: string
+          format: email
+        friendsSince:
+          type: string
+          format: date-time
+          description: When the friendship was created
+
+    # ==================== NOTIFICATIONS SCHEMAS ====================
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        message:
+          type: string
+        date:
+          type: string
+          format: date-time
+        read:
+          type: boolean
+        requestId:
+          type: integer
+          format: int64
+          nullable: true
+          description: ID of the associated request (if any)
