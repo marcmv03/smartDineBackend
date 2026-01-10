@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,14 +19,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.smartDine.dto.AddParticipantRequestDTO;
 import com.smartDine.dto.ProfileDTO;
 import com.smartDine.dto.ReservationDTO;
 import com.smartDine.dto.ReservationDetailsDTO;
+import com.smartDine.dto.ReservationParticipationDTO;
 import com.smartDine.dto.RestaurantReservationDTO;
 import com.smartDine.dto.UpdateReservationStatusDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
+import com.smartDine.entity.ReservationParticipation;
 import com.smartDine.entity.Role;
 import com.smartDine.entity.User;
 import com.smartDine.services.CustomerService;
@@ -132,5 +136,42 @@ public class ReservationController {
         List<Customer> participants = reservationService.getReservationParticipants(id, customer.getId());
         List<ProfileDTO> response = ProfileDTO.fromEntity(participants);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reservations/{id}/participants")
+    public ResponseEntity<ReservationParticipationDTO> addParticipant(
+        @PathVariable Long id,
+        @Valid @RequestBody AddParticipantRequestDTO request,
+        @AuthenticationPrincipal User user
+    ) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (user.getRole() != Role.ROLE_CUSTOMER) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        ReservationParticipation participation = reservationService.addFriendAsParticipant(
+            id, request.getFriendId(), user.getId()
+        );
+        ReservationParticipationDTO response = ReservationParticipationDTO.fromEntity(participation);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @DeleteMapping("/reservations/{reservationId}/participants/{participantId}")
+    public ResponseEntity<Void> removeParticipant(
+        @PathVariable Long reservationId,
+        @PathVariable Long participantId,
+        @AuthenticationPrincipal User user
+    ) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (user.getRole() != Role.ROLE_CUSTOMER) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        reservationService.removeParticipantFromReservation(reservationId, participantId, user.getId());
+        return ResponseEntity.noContent().build();
     }
 }

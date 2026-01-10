@@ -14,20 +14,25 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 
+import com.smartDine.dto.AddParticipantRequestDTO;
 import com.smartDine.dto.ProfileDTO;
 import com.smartDine.dto.ReservationDTO;
 import com.smartDine.dto.ReservationDetailsDTO;
+import com.smartDine.dto.ReservationParticipationDTO;
 import com.smartDine.dto.RestaurantReservationDTO;
 import com.smartDine.dto.UpdateReservationStatusDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
+import com.smartDine.entity.ReservationParticipation;
 import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
@@ -395,7 +400,7 @@ class ReservationControllerTest {
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
     }
 
-    @Test
+@Test
     void getReservationParticipants_NotOwnerOrParticipant_ThrowsException() {
         when(customerService.getCustomerById(1L)).thenReturn(customer);
         when(reservationService.getReservationParticipants(40L, 1L))
@@ -405,5 +410,192 @@ class ReservationControllerTest {
             reservationController.getReservationParticipants(40L, customer)
         );
     }
+
+    // ==================== addParticipant Tests ====================
+
+    @Test
+    void addParticipant_Success_ReturnsCreated() {
+        Customer friend = new Customer();
+        friend.setId(2L);
+        friend.setName("Friend");
+        friend.setEmail("friend@test.com");
+
+        ReservationParticipation participation = new ReservationParticipation(reservation, friend);
+        participation.setId(100L);
+
+        AddParticipantRequestDTO request = new AddParticipantRequestDTO();
+        request.setFriendId(2L);
+
+        when(reservationService.addFriendAsParticipant(40L, 2L, 1L)).thenReturn(participation);
+
+        ResponseEntity<ReservationParticipationDTO> response = reservationController.addParticipant(40L, request, customer);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(100L, response.getBody().getId());
+        assertEquals(40L, response.getBody().getReservationId());
+        assertEquals(2L, response.getBody().getParticipantId());
+        assertEquals("Friend", response.getBody().getParticipantName());
+    }
+
+    @Test
+    void addParticipant_NullUser_ReturnsUnauthorized() {
+        AddParticipantRequestDTO request = new AddParticipantRequestDTO();
+        request.setFriendId(2L);
+
+        ResponseEntity<ReservationParticipationDTO> response = reservationController.addParticipant(40L, request, null);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    @Test
+    void addParticipant_NotCustomerRole_ReturnsForbidden() {
+        Business business = new Business();
+        business.setId(5L);
+
+        AddParticipantRequestDTO request = new AddParticipantRequestDTO();
+        request.setFriendId(2L);
+
+        ResponseEntity<ReservationParticipationDTO> response = reservationController.addParticipant(40L, request, business);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
+
+    @Test
+    void addParticipant_NotOwner_ThrowsBadCredentials() {
+        AddParticipantRequestDTO request = new AddParticipantRequestDTO();
+        request.setFriendId(2L);
+
+        when(reservationService.addFriendAsParticipant(40L, 2L, 1L))
+            .thenThrow(new BadCredentialsException("Only the reservation owner can add participants"));
+
+        assertThrows(BadCredentialsException.class, () ->
+            reservationController.addParticipant(40L, request, customer)
+        );
+    }
+
+    @Test
+    void addParticipant_NotFriend_ThrowsIllegalArgument() {
+        AddParticipantRequestDTO request = new AddParticipantRequestDTO();
+        request.setFriendId(2L);
+
+        when(reservationService.addFriendAsParticipant(40L, 2L, 1L))
+            .thenThrow(new IllegalArgumentException("You can only add friends as participants"));
+
+        assertThrows(IllegalArgumentException.class, () ->
+            reservationController.addParticipant(40L, request, customer)
+        );
+    }
+
+    @Test
+    void addParticipant_CapacityExceeded_ThrowsIllegalReservationState() {
+        AddParticipantRequestDTO request = new AddParticipantRequestDTO();
+        request.setFriendId(2L);
+
+        when(reservationService.addFriendAsParticipant(40L, 2L, 1L))
+            .thenThrow(new IllegalReservationStateChangeException("Cannot add participant: would exceed table capacity of 4"));
+
+        assertThrows(IllegalReservationStateChangeException.class, () ->
+            reservationController.addParticipant(40L, request, customer)
+        );
+    }
+
+    @Test
+    void addParticipant_AlreadyParticipant_ThrowsIllegalReservationState() {
+        AddParticipantRequestDTO request = new AddParticipantRequestDTO();
+        request.setFriendId(2L);
+
+        when(reservationService.addFriendAsParticipant(40L, 2L, 1L))
+            .thenThrow(new IllegalReservationStateChangeException("This user is already a participant in the reservation"));
+
+        assertThrows(IllegalReservationStateChangeException.class, () ->
+            reservationController.addParticipant(40L, request, customer)
+        );
+    }
+
+    // ==================== removeParticipant Tests ====================
+
+    @Test
+    void removeParticipant_OwnerRemoves_ReturnsNoContent() {
+        doNothing().when(reservationService).removeParticipantFromReservation(40L, 2L, 1L);
+
+        ResponseEntity<Void> response = reservationController.removeParticipant(40L, 2L, customer);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    }
+
+    @Test
+    void removeParticipant_SelfRemoval_ReturnsNoContent() {
+        Customer participant = new Customer();
+        participant.setId(2L);
+        participant.setName("Participant");
+
+        doNothing().when(reservationService).removeParticipantFromReservation(40L, 2L, 2L);
+
+        ResponseEntity<Void> response = reservationController.removeParticipant(40L, 2L, participant);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    }
+
+    @Test
+    void removeParticipant_NullUser_ReturnsUnauthorized() {
+        ResponseEntity<Void> response = reservationController.removeParticipant(40L, 2L, null);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    @Test
+    void removeParticipant_NotCustomerRole_ReturnsForbidden() {
+        Business business = new Business();
+        business.setId(5L);
+
+        ResponseEntity<Void> response = reservationController.removeParticipant(40L, 2L, business);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
+
+    @Test
+    void removeParticipant_CannotRemoveOwner_ThrowsIllegalReservationState() {
+        doThrow(new IllegalReservationStateChangeException("Cannot remove the reservation owner. Use cancel reservation instead."))
+            .when(reservationService).removeParticipantFromReservation(40L, 1L, 1L);
+
+        assertThrows(IllegalReservationStateChangeException.class, () ->
+            reservationController.removeParticipant(40L, 1L, customer)
+        );
+    }
+
+    @Test
+    void removeParticipant_Unauthorized_ThrowsBadCredentials() {
+        Customer otherCustomer = new Customer();
+        otherCustomer.setId(3L);
+
+        doThrow(new BadCredentialsException("Only the reservation owner or the participant themselves can remove a participant"))
+            .when(reservationService).removeParticipantFromReservation(40L, 2L, 3L);
+
+        assertThrows(BadCredentialsException.class, () ->
+            reservationController.removeParticipant(40L, 2L, otherCustomer)
+        );
+    }
+
+    @Test
+    void removeParticipant_ReservationNotFound_ThrowsIllegalArgument() {
+        doThrow(new IllegalArgumentException("Reservation not found with id: 999"))
+            .when(reservationService).removeParticipantFromReservation(999L, 2L, 1L);
+
+        assertThrows(IllegalArgumentException.class, () ->
+            reservationController.removeParticipant(999L, 2L, customer)
+        );
+    }
+
+    @Test
+    void removeParticipant_ParticipantNotFound_ThrowsIllegalArgument() {
+        doThrow(new IllegalArgumentException("Participant not found in this reservation"))
+            .when(reservationService).removeParticipantFromReservation(40L, 999L, 1L);
+
+        assertThrows(IllegalArgumentException.class, () ->
+            reservationController.removeParticipant(40L, 999L, customer)
+        );
+    }
 }
+
 

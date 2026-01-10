@@ -36,19 +36,22 @@ public class CommunityPostServiceImpl implements CommunityPostService {
     private final UserRepository userRepository;
     private final OpenReservationPostRepository openReservationPostRepository;
     private final ReservationService reservationService;
+    private final NotificationService notificationService;
 
     public CommunityPostServiceImpl(CommunityPostRepository communityPostRepository,
             CommunityMemberRepository communityMemberRepository,
             CommunityRepository communityRepository,
             UserRepository userRepository,
             OpenReservationPostRepository openReservationPostRepository,
-            ReservationService reservationService) {
+            ReservationService reservationService,
+            NotificationService notificationService) {
         this.communityPostRepository = communityPostRepository;
         this.communityMemberRepository = communityMemberRepository;
         this.communityRepository = communityRepository;
         this.userRepository = userRepository;
         this.openReservationPostRepository = openReservationPostRepository;
         this.reservationService = reservationService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -260,7 +263,17 @@ public class CommunityPostServiceImpl implements CommunityPostService {
 
         // Increment the post's participant count
         post.incrementParticipants();
-        return openReservationPostRepository.save(post);
+        OpenReservationPost savedPost = openReservationPostRepository.save(post);
+        
+        // Notify the reservation creator that someone joined
+        User reservationCreator = post.getReservation().getCustomer();
+        String message = String.format("%s se ha unido a la reserva abierta %s de la comunidad %s",
+                customer.getName(),
+                post.getTitle(),
+                post.getCommunity().getName());
+        notificationService.createNotification(reservationCreator, message);
+        
+        return savedPost;
     }
 
     @Override

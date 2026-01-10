@@ -37,6 +37,12 @@ public class ReservationService {
     private  RestaurantTableService restaurantTableService;
     @Autowired
     private  ReservationParticipationService reservationParticipationService;
+    @Autowired
+    private NotificationService notificationService;
+    @Autowired
+    private FriendshipService friendshipService;
+    @Autowired
+    private CustomerService customerService;
 
     @Transactional
     public Reservation createReservation(ReservationDTO reservationDTO, Customer customer) {
@@ -62,7 +68,17 @@ public class ReservationService {
         reservation.setStatus(ReservationStatus.CONFIRMED);
         reservation.setCreatedAt(LocalDate.now());
         
-        return reservationRepository.save(reservation);
+        Reservation savedReservation = reservationRepository.save(reservation);
+        
+        // Notify restaurant owner about the new reservation
+        String message = String.format("%s ha hecho una reserva en el %s a las %.0f el día %s",
+                customer.getName(),
+                restaurant.getName(),
+                timeSlot.getStartTime(),
+                reservationDTO.getDate().toString());
+        notificationService.createNotification(restaurant.getOwner(), message);
+        
+        return savedReservation;
     }
 
     @Transactional(readOnly = true)
@@ -367,6 +383,137 @@ public class ReservationService {
         }
 
         return reservationParticipationService.getParticipantCustomers(reservationId);
+    }
+
+    /**
+     * Adds a friend as a participant to a reservation.
+     * 
+     * Validations:
+     * - Requester must be the owner of the reservation
+     * - Friend must exist and be a Customer
+     * - Requester and friend must be friends
+     * - Friend must not already be a participant
+     * - Adding friend must not exceed table capacity
+     * - Friend must not have conflicting reservations
+     * 
+     * @param reservationId The ID of the reservation
+     * @param friendId The ID of the friend to add
+     * @param ownerId The ID of the reservation owner making the request
+     * @return The created ReservationParticipation
+     * @throws IllegalArgumentException if reservation or friend not found
+     * @throws BadCredentialsException if requester is not the owner
+     * @throws IllegalReservationStateChangeException for other validation failures
+     */
+    @Transactional
+    public ReservationParticipation addFriendAsParticipant(Long reservationId, Long friendId, Long ownerId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+            .orElseThrow(() -> new IllegalArgumentException("Reservation not found with id: " + reservationId));
+
+        // Check if requester is the owner
+        if (!reservation.getCustomer().getId().equals(ownerId)) {
+            throw new BadCredentialsException("Only the reservation owner can add participants");
+        }
+
+        // Get the friend (must be a Customer)
+        Customer friend = customerService.getCustomerById(friendId);
+
+        // Check if they are actually friends
+        Customer owner = reservation.getCustomer();
+        if (!friendshipService.areFriends(owner, friend)) {
+            throw new IllegalArgumentException("You can only add friends as participants");
+        }
+
+        // Check if reservation date has passed
+        if (reservation.getDate().isBefore(LocalDate.now())) {
+            throw new ExpiredOpenReservationException("Cannot add participant: the reservation date has already passed");
+        }
+
+        // Check if reservation is confirmed
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+            throw new IllegalReservationStateChangeException(
+                "Cannot add participant: reservation is " + reservation.getStatus()
+            );
+        }
+
+        // Check if friend is already a participant
+        if (isParticipant(reservation, friend)) {
+            throw new IllegalReservationStateChangeException("This user is already a participant in the reservation");
+        }
+
+        // Check table capacity
+        int currentTotal = getTotalParticipantsCount(reservation);
+        if (currentTotal >= reservation.getRestaurantTable().getCapacity()) {
+            throw new IllegalReservationStateChangeException(
+                "Cannot add participant: would exceed table capacity of " + reservation.getRestaurantTable().getCapacity()
+            );
+        }
+
+        // Check for time conflicts
+        if (hasTimeConflict(friend, reservation.getTimeSlot(), reservation.getDate(), reservationId)) {
+            throw new IllegalReservationStateChangeException(
+                "Cannot add participant: they have a conflicting reservation at the same time"
+            );
+        }
+
+        // All validations passed - add the participant
+        ReservationParticipation participation = reservationParticipationService
+                .createNewParticipation(friendId, reservationId);
+
+        // Notify the friend that they've been added
+        String message = String.format("Has sido añadido a la reserva de %s en %s el día %s",
+                owner.getName(),
+                reservation.getRestaurant().getName(),
+                reservation.getDate().toString());
+        notificationService.createNotification(friend, message);
+
+        return participation;
+    }
+
+    /**
+     * Removes a participant from a reservation.
+     * 
+     * Validations:
+     * - Requester must be the owner OR the participant being removed (self-removal)
+     * - Cannot remove the reservation owner
+     * 
+     * @param reservationId The ID of the reservation
+     * @param participantId The ID of the participant to remove
+     * @param requesterId The ID of the user making the request
+     * @throws IllegalArgumentException if reservation not found or participant not in reservation
+     * @throws BadCredentialsException if requester is not authorized
+     * @throws IllegalReservationStateChangeException if trying to remove the owner
+     */
+    @Transactional
+    public void removeParticipantFromReservation(Long reservationId, Long participantId, Long requesterId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+            .orElseThrow(() -> new IllegalArgumentException("Reservation not found with id: " + reservationId));
+
+        // Cannot remove the reservation owner
+        if (reservation.getCustomer().getId().equals(participantId)) {
+            throw new IllegalReservationStateChangeException(
+                "Cannot remove the reservation owner. Use cancel reservation instead."
+            );
+        }
+
+        boolean isOwner = reservation.getCustomer().getId().equals(requesterId);
+        boolean isSelfRemoval = participantId.equals(requesterId);
+
+        // Only owner or the participant themselves can remove
+        if (!isOwner && !isSelfRemoval) {
+            throw new BadCredentialsException("Only the reservation owner or the participant themselves can remove a participant");
+        }
+
+        // Remove the participation
+        reservationParticipationService.removeParticipation(reservationId, participantId);
+
+        // Notify the participant if removed by owner (not self-removal)
+        if (isOwner && !isSelfRemoval) {
+            Customer participant = customerService.getCustomerById(participantId);
+            String message = String.format("Has sido eliminado de la reserva en %s el día %s",
+                    reservation.getRestaurant().getName(),
+                    reservation.getDate().toString());
+            notificationService.createNotification(participant, message);
+        }
     }
 }
 

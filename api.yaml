@@ -810,6 +810,138 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden - user is not a customer
+  
+  /smartdine/api/reservations/{id}/participants:
+    get:
+      tags:
+        - Reservations
+      summary: Get all participants of a reservation
+      operationId: getReservationParticipants
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The reservation ID
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: List of participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Profile'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - user is not a customer
+        '404':
+          description: Reservation not found
+    post:
+      tags:
+        - Reservations
+      summary: Add a friend as participant to a reservation
+      description: |
+        Allows the reservation owner to add a friend as a participant.
+        Validations:
+        - Only the reservation owner can add participants
+        - The user to add must be a friend
+        - The reservation must not be full (table capacity)
+        - The friend must not have conflicting reservations
+      operationId: addReservationParticipant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The reservation ID
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddParticipantRequest'
+            examples:
+              sample:
+                summary: Add a friend to reservation
+                value:
+                  friendId: 42
+      responses:
+        '201':
+          description: Participant added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationParticipation'
+        '400':
+          description: |
+            Bad request - one of the following:
+            - User is not a friend
+            - Reservation is full
+            - Friend has conflicting reservation
+            - Friend is already a participant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - user is not the reservation owner
+        '404':
+          description: Reservation or friend not found
+
+  /smartdine/api/reservations/{reservationId}/participants/{participantId}:
+    delete:
+      tags:
+        - Reservations
+      summary: Remove a participant from a reservation
+      description: |
+        Allows the reservation owner to remove a participant, or a participant to remove themselves.
+        The reservation owner cannot be removed.
+      operationId: removeReservationParticipant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          description: The reservation ID
+          schema:
+            type: integer
+            format: int64
+        - name: participantId
+          in: path
+          required: true
+          description: The participant ID to remove
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Participant removed successfully
+        '400':
+          description: Cannot remove the reservation owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - only owner or the participant themselves can remove
+        '404':
+          description: Reservation or participant not found
+
   /smartdine/api/me:
     get:
       tags:
@@ -834,36 +966,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  # ==================== FRIENDS ====================
-  /smartdine/api/users/{id}/friend-requests:
+  # ==================== REQUESTS ====================
+  /smartdine/api/requests:
     post:
       tags:
         - Friends
-      summary: Send a friend request to another user
-      operationId: sendFriendRequest
+      summary: Send a request to another user
+      description: |
+        Creates a new request (friend request, community invite, etc.) to another user.
+        The type of request is specified in the request body.
+      operationId: sendRequest
       security:
         - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-            format: int64
-          description: ID of the user to send the friend request to
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCreation'
+            examples:
+              friendRequest:
+                summary: Send a friend request
+                value:
+                  userId: 42
+                  requestType: "FRIEND_REQUEST"
       responses:
         '201':
-          description: Friend request sent successfully
+          description: Request sent successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/FriendRequest'
         '400':
-          description: |
-            Bad request - one of the following:
-            - Cannot send friend request to yourself
-            - A pending friend request already exists
-            - You are already friends with this user
+          description: Bad request - validation error
           content:
             application/json:
               schema:
@@ -871,21 +1006,31 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: Forbidden - only customers can send friend requests
+          description: Forbidden - only customers can send requests
         '404':
           description: User not found
+        '409':
+          description: |
+            Conflict - one of the following:
+            - Cannot send request to yourself
+            - A pending request already exists
+            - You are already friends with this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /smartdine/api/users/me/friend-requests:
+  /smartdine/api/me/requests:
     get:
       tags:
         - Friends
-      summary: Get pending friend requests received by the authenticated user
-      operationId: getPendingFriendRequests
+      summary: Get pending requests received by the authenticated user
+      operationId: getPendingRequests
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: List of pending friend requests
+          description: List of pending requests
           content:
             application/json:
               schema:
@@ -895,9 +1040,9 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: Forbidden - only customers can view friend requests
+          description: Forbidden - only customers can view requests
 
-  /smartdine/api/friend-requests/{id}/accept:
+  /smartdine/api/requests/{id}/accept:
     post:
       tags:
         - Friends
@@ -933,14 +1078,14 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: Forbidden - only customers can accept friend requests
+          description: Forbidden - only customers can accept requests
 
-  /smartdine/api/friend-requests/{id}/reject:
+  /smartdine/api/requests/{id}/reject:
     post:
       tags:
         - Friends
-      summary: Reject a friend request
-      operationId: rejectFriendRequest
+      summary: Reject a request
+      operationId: rejectRequest
       security:
         - bearerAuth: []
       parameters:
@@ -950,10 +1095,10 @@ paths:
           schema:
             type: integer
             format: int64
-          description: ID of the friend request to reject
+          description: ID of the request to reject
       responses:
         '200':
-          description: Friend request rejected
+          description: Request rejected
           content:
             application/json:
               schema:
@@ -971,9 +1116,9 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: Forbidden - only customers can reject friend requests
+          description: Forbidden - only customers can reject requests
 
-  /smartdine/api/users/me/friends:
+  /smartdine/api/me/friends:
     get:
       tags:
         - Friends
@@ -1985,6 +2130,37 @@ components:
         date:
           type: string
           format: date
+    AddParticipantRequest:
+      type: object
+      required:
+        - friendId
+      properties:
+        friendId:
+          type: integer
+          format: int64
+          description: ID of the friend to add as participant
+    ReservationParticipation:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier of the participation record
+        reservationId:
+          type: integer
+          format: int64
+          description: ID of the reservation
+        participantId:
+          type: integer
+          format: int64
+          description: ID of the participant (customer)
+        participantName:
+          type: string
+          description: Name of the participant
+        addedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the participant was added
     CommunityPost:
       type: object
       properties:
@@ -2141,7 +2317,24 @@ components:
           format: double
           description: End time as decimal (e.g., 14.0 = 14:00)
 
-    # ==================== FRIENDS SCHEMAS ====================
+    # ==================== REQUESTS SCHEMAS ====================
+    RequestCreation:
+      type: object
+      required:
+        - userId
+        - requestType
+      properties:
+        userId:
+          type: integer
+          format: int64
+          description: ID of the user to send the request to
+        requestType:
+          type: string
+          enum:
+            - FRIEND_REQUEST
+            - COMMUNITY_INVITE
+          description: Type of request to create
+
     FriendRequest:
       type: object
       properties:

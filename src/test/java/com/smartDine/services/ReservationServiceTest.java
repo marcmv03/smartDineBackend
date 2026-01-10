@@ -19,6 +19,7 @@ import com.smartDine.dto.ReservationDTO;
 import com.smartDine.entity.Business;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Reservation;
+import com.smartDine.entity.ReservationParticipation;
 import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
 import com.smartDine.entity.RestaurantTable;
@@ -55,6 +56,9 @@ class ReservationServiceTest {
 
     @Autowired
     private CustomerRepository customerRepository;
+
+    @Autowired
+    private FriendshipService friendshipService;
 
     @Test
     @DisplayName("Should create a reservation with specified table and date")
@@ -630,6 +634,305 @@ class ReservationServiceTest {
         assertEquals(1, allReservations.size());
         assertEquals(reservation.getId(), allReservations.get(0).getId());
         assertEquals(reservationOwner.getId(), allReservations.get(0).getCustomer().getId());
+    }
+
+    // ==================== addFriendAsParticipant Tests ====================
+
+    @Test
+    @DisplayName("Should add friend as participant successfully")
+    void addFriendAsParticipant_Success() {
+        Business owner = createBusiness("OwnerFriend1", "ownerfriend1@smartdine.com", 500000001L);
+        Restaurant restaurant = createRestaurant(owner, "Friend Restaurant 1");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 1, 6);
+        Customer reservationOwner = createCustomer("ResOwner1", "resowner1@smartdine.com", 600000001L);
+        Customer friend = createCustomer("Friend1", "friend1@smartdine.com", 600000002L);
+
+        // Create friendship
+        friendshipService.createFriendship(reservationOwner, friend);
+
+        // Create reservation
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(1));
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+
+        // Add friend as participant
+        ReservationParticipation participation = reservationService.addFriendAsParticipant(
+            reservation.getId(), friend.getId(), reservationOwner.getId()
+        );
+
+        assertNotNull(participation);
+        assertEquals(friend.getId(), participation.getCustomer().getId());
+        assertEquals(reservation.getId(), participation.getReservation().getId());
+    }
+
+    @Test
+    @DisplayName("Should fail to add non-friend as participant")
+    void addFriendAsParticipant_NotFriend_ThrowsException() {
+        Business owner = createBusiness("OwnerFriend2", "ownerfriend2@smartdine.com", 500000002L);
+        Restaurant restaurant = createRestaurant(owner, "Friend Restaurant 2");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.TUESDAY, 18.0, 20.0);
+        RestaurantTable table = createTable(restaurant, 2, 4);
+        Customer reservationOwner = createCustomer("ResOwner2", "resowner2@smartdine.com", 600000003L);
+        Customer notFriend = createCustomer("NotFriend2", "notfriend2@smartdine.com", 600000004L);
+
+        // No friendship created
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(2));
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> reservationService.addFriendAsParticipant(
+                reservation.getId(), notFriend.getId(), reservationOwner.getId()
+            )
+        );
+
+        assertEquals("You can only add friends as participants", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should fail when non-owner tries to add participant")
+    void addFriendAsParticipant_NonOwner_ThrowsException() {
+        Business owner = createBusiness("OwnerFriend3", "ownerfriend3@smartdine.com", 500000003L);
+        Restaurant restaurant = createRestaurant(owner, "Friend Restaurant 3");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.WEDNESDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 3, 4);
+        Customer reservationOwner = createCustomer("ResOwner3", "resowner3@smartdine.com", 600000005L);
+        Customer friend = createCustomer("Friend3", "friend3@smartdine.com", 600000006L);
+        Customer otherCustomer = createCustomer("OtherCust3", "othercust3@smartdine.com", 600000007L);
+
+        friendshipService.createFriendship(reservationOwner, friend);
+        friendshipService.createFriendship(otherCustomer, friend);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(3));
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+
+        BadCredentialsException exception = assertThrows(
+            BadCredentialsException.class,
+            () -> reservationService.addFriendAsParticipant(
+                reservation.getId(), friend.getId(), otherCustomer.getId() // Wrong owner
+            )
+        );
+
+        assertEquals("Only the reservation owner can add participants", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should fail when table capacity is exceeded")
+    void addFriendAsParticipant_CapacityExceeded_ThrowsException() {
+        Business owner = createBusiness("OwnerFriend4", "ownerfriend4@smartdine.com", 500000004L);
+        Restaurant restaurant = createRestaurant(owner, "Friend Restaurant 4");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.THURSDAY, 19.0, 21.0);
+        RestaurantTable table = createTable(restaurant, 4, 2); // Capacity of 2
+        Customer reservationOwner = createCustomer("ResOwner4", "resowner4@smartdine.com", 600000008L);
+        Customer friend1 = createCustomer("Friend4A", "friend4a@smartdine.com", 600000009L);
+        Customer friend2 = createCustomer("Friend4B", "friend4b@smartdine.com", 600000010L);
+
+        friendshipService.createFriendship(reservationOwner, friend1);
+        friendshipService.createFriendship(reservationOwner, friend2);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(1);
+        dto.setDate(LocalDate.now().plusDays(4));
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+
+        // Add first friend (capacity becomes 2)
+        reservationService.addFriendAsParticipant(reservation.getId(), friend1.getId(), reservationOwner.getId());
+
+        // Try to add second friend (capacity exceeded)
+        IllegalReservationStateChangeException exception = assertThrows(
+            IllegalReservationStateChangeException.class,
+            () -> reservationService.addFriendAsParticipant(
+                reservation.getId(), friend2.getId(), reservationOwner.getId()
+            )
+        );
+
+        assertEquals("Cannot add participant: would exceed table capacity of 2", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should fail when friend already a participant")
+    void addFriendAsParticipant_AlreadyParticipant_ThrowsException() {
+        Business owner = createBusiness("OwnerFriend5", "ownerfriend5@smartdine.com", 500000005L);
+        Restaurant restaurant = createRestaurant(owner, "Friend Restaurant 5");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.FRIDAY, 18.0, 20.0);
+        RestaurantTable table = createTable(restaurant, 5, 6);
+        Customer reservationOwner = createCustomer("ResOwner5", "resowner5@smartdine.com", 600000011L);
+        Customer friend = createCustomer("Friend5", "friend5@smartdine.com", 600000012L);
+
+        friendshipService.createFriendship(reservationOwner, friend);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(5));
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+
+        // Add friend once
+        reservationService.addFriendAsParticipant(reservation.getId(), friend.getId(), reservationOwner.getId());
+
+        // Try to add again
+        IllegalReservationStateChangeException exception = assertThrows(
+            IllegalReservationStateChangeException.class,
+            () -> reservationService.addFriendAsParticipant(
+                reservation.getId(), friend.getId(), reservationOwner.getId()
+            )
+        );
+
+        assertEquals("This user is already a participant in the reservation", exception.getMessage());
+    }
+
+    // ==================== removeParticipantFromReservation Tests ====================
+
+    @Test
+    @DisplayName("Owner should be able to remove participant")
+    void removeParticipantFromReservation_OwnerRemovesParticipant_Success() {
+        Business owner = createBusiness("OwnerRemove1", "ownerremove1@smartdine.com", 700000001L);
+        Restaurant restaurant = createRestaurant(owner, "Remove Restaurant 1");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.MONDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 1, 4);
+        Customer reservationOwner = createCustomer("ResOwnerRem1", "resownerrem1@smartdine.com", 800000001L);
+        Customer friend = createCustomer("FriendRem1", "friendrem1@smartdine.com", 800000002L);
+
+        friendshipService.createFriendship(reservationOwner, friend);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(1));
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+        reservationService.addFriendAsParticipant(reservation.getId(), friend.getId(), reservationOwner.getId());
+
+        // Owner removes participant
+        reservationService.removeParticipantFromReservation(
+            reservation.getId(), friend.getId(), reservationOwner.getId()
+        );
+
+        // Verify participant was removed
+        Reservation updated = reservationService.getReservationById(reservation.getId());
+        assertEquals(1, reservationService.getTotalParticipantsCount(updated)); // Only owner
+    }
+
+    @Test
+    @DisplayName("Participant should be able to remove themselves")
+    void removeParticipantFromReservation_SelfRemoval_Success() {
+        Business owner = createBusiness("OwnerRemove2", "ownerremove2@smartdine.com", 700000002L);
+        Restaurant restaurant = createRestaurant(owner, "Remove Restaurant 2");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.TUESDAY, 18.0, 20.0);
+        RestaurantTable table = createTable(restaurant, 2, 4);
+        Customer reservationOwner = createCustomer("ResOwnerRem2", "resownerrem2@smartdine.com", 800000003L);
+        Customer friend = createCustomer("FriendRem2", "friendrem2@smartdine.com", 800000004L);
+
+        friendshipService.createFriendship(reservationOwner, friend);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(2));
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+        reservationService.addFriendAsParticipant(reservation.getId(), friend.getId(), reservationOwner.getId());
+
+        // Friend removes themselves
+        reservationService.removeParticipantFromReservation(
+            reservation.getId(), friend.getId(), friend.getId()
+        );
+
+        // Verify participant was removed
+        Reservation updated = reservationService.getReservationById(reservation.getId());
+        assertEquals(1, reservationService.getTotalParticipantsCount(updated)); // Only owner
+    }
+
+    @Test
+    @DisplayName("Should fail to remove reservation owner")
+    void removeParticipantFromReservation_CannotRemoveOwner() {
+        Business owner = createBusiness("OwnerRemove3", "ownerremove3@smartdine.com", 700000003L);
+        Restaurant restaurant = createRestaurant(owner, "Remove Restaurant 3");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.WEDNESDAY, 12.0, 14.0);
+        RestaurantTable table = createTable(restaurant, 3, 4);
+        Customer reservationOwner = createCustomer("ResOwnerRem3", "resownerrem3@smartdine.com", 800000005L);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(3));
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+
+        IllegalReservationStateChangeException exception = assertThrows(
+            IllegalReservationStateChangeException.class,
+            () -> reservationService.removeParticipantFromReservation(
+                reservation.getId(), reservationOwner.getId(), reservationOwner.getId()
+            )
+        );
+
+        assertEquals("Cannot remove the reservation owner. Use cancel reservation instead.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Non-owner non-participant should not be able to remove others")
+    void removeParticipantFromReservation_UnauthorizedRemoval_ThrowsException() {
+        Business owner = createBusiness("OwnerRemove4", "ownerremove4@smartdine.com", 700000004L);
+        Restaurant restaurant = createRestaurant(owner, "Remove Restaurant 4");
+        TimeSlot timeSlot = createTimeSlot(restaurant, DayOfWeek.THURSDAY, 19.0, 21.0);
+        RestaurantTable table = createTable(restaurant, 4, 4);
+        Customer reservationOwner = createCustomer("ResOwnerRem4", "resownerrem4@smartdine.com", 800000006L);
+        Customer friend = createCustomer("FriendRem4", "friendrem4@smartdine.com", 800000007L);
+        Customer otherCustomer = createCustomer("OtherCustRem4", "othercustrem4@smartdine.com", 800000008L);
+
+        friendshipService.createFriendship(reservationOwner, friend);
+
+        ReservationDTO dto = new ReservationDTO();
+        dto.setRestaurantId(restaurant.getId());
+        dto.setTimeSlotId(timeSlot.getId());
+        dto.setTableId(table.getId());
+        dto.setNumCustomers(2);
+        dto.setDate(LocalDate.now().plusDays(4));
+
+        Reservation reservation = reservationService.createReservation(dto, reservationOwner);
+        reservationService.addFriendAsParticipant(reservation.getId(), friend.getId(), reservationOwner.getId());
+
+        // Other customer (not owner, not the participant) tries to remove friend
+        BadCredentialsException exception = assertThrows(
+            BadCredentialsException.class,
+            () -> reservationService.removeParticipantFromReservation(
+                reservation.getId(), friend.getId(), otherCustomer.getId()
+            )
+        );
+
+        assertEquals("Only the reservation owner or the participant themselves can remove a participant", exception.getMessage());
     }
 
     private Business createBusiness(String name, String email, Long phoneNumber) {

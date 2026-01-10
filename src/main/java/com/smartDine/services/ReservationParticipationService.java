@@ -114,4 +114,21 @@ public class ReservationParticipationService {
                 .map(ReservationParticipation::getCustomer)
                 .collect(java.util.stream.Collectors.toList());
     }
+
+    /**
+     * Removes a participation record from a reservation.
+     * 
+     * @param reservationId The ID of the reservation
+     * @param participantId The ID of the participant to remove
+     * @throws IllegalArgumentException if reservation or participant not found, or participant is not in the reservation
+     */
+    @Transactional
+    public void removeParticipation(Long reservationId, Long participantId) {
+        ReservationParticipation participation = participationRepository
+                .findByReservationIdAndCustomerId(reservationId, participantId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Participant with id " + participantId + " is not in reservation " + reservationId));
+        
+        participationRepository.delete(participation);
+    }
 }

@@ -30,6 +30,7 @@ import com.smartDine.entity.CommunityType;
 import com.smartDine.entity.Customer;
 import com.smartDine.entity.Member;
 import com.smartDine.entity.MemberRole;
+import com.smartDine.entity.Notification;
 import com.smartDine.entity.Reservation;
 import com.smartDine.entity.ReservationStatus;
 import com.smartDine.entity.Restaurant;
@@ -60,6 +61,8 @@ public class CommunityPostServiceImplTest {
     private OpenReservationPostRepository openReservationPostRepository;
     @Mock
     private ReservationService reservationService;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private CommunityPostServiceImpl communityPostService;
@@ -307,6 +310,14 @@ public class CommunityPostServiceImplTest {
         joinerMember.setCommunity(community);
         joinerMember.setMemberRole(MemberRole.PARTICIPANT);
 
+        // Reservation owner (the one who receives the notification)
+        Customer reservationOwner = new Customer();
+        reservationOwner.setId(10L);
+        reservationOwner.setName("Reservation Owner");
+        reservationOwner.setEmail("owner@example.com");
+        reservationOwner.setPassword("password");
+        reservationOwner.setPhoneNumber(999L);
+
         Restaurant restaurant = new Restaurant();
         restaurant.setId(1L);
         restaurant.setName("Test Restaurant");
@@ -314,6 +325,7 @@ public class CommunityPostServiceImplTest {
         Reservation reservation = new Reservation();
         reservation.setId(1L);
         reservation.setRestaurant(restaurant);
+        reservation.setCustomer(reservationOwner);
 
         OpenReservationPost post = new OpenReservationPost();
         post.setId(500L);
@@ -330,11 +342,22 @@ public class CommunityPostServiceImplTest {
         when(communityMemberRepository.findByUserAndCommunity(joiner, community)).thenReturn(Optional.of(joinerMember));
         doNothing().when(reservationService).addParticipantToReservation(reservation.getId(), joiner, 3);
         when(openReservationPostRepository.save(any(OpenReservationPost.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(notificationService.createNotification(any(), any())).thenAnswer(inv -> {
+            Notification n = new Notification(inv.getArgument(0), inv.getArgument(1));
+            n.setId(100L);
+            return n;
+        });
 
         OpenReservationPost result = communityPostService.joinOpenReservationPost(500L, joiner.getId());
 
         assertNotNull(result);
         assertEquals(1, result.getCurrentParticipants());
+        
+        // Verify notification was sent to reservation owner
+        org.mockito.Mockito.verify(notificationService).createNotification(
+            org.mockito.ArgumentMatchers.eq(reservationOwner),
+            org.mockito.ArgumentMatchers.contains("Joiner se ha unido a la reserva abierta")
+        );
     }
 
     @Test
