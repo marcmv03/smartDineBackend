@@ -2,6 +2,7 @@ package com.smartDine.services;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,10 +26,38 @@ public class RestaurantTableService {
     
     @Autowired
     private RestaurantService restaurantService;
-
     @Autowired
-    private ReservationRepository reservationRepository; // ← Cambiado de ReservationService a ReservationRepository
+    private ReservationRepository reservationRepository; 
     
+    @Transactional(readOnly = true) 
+    public List<RestaurantTableDTO> getAvailableTables(Long restaurantId, Long timeSlotId, 
+        LocalDate date, Boolean outside) {
+        if (outside == null) {
+            throw new IllegalArgumentException("Outside preference is required");
+        }
+
+        List<RestaurantTable> restaurantTables = restaurantService.getTables(restaurantId);
+
+        List<Reservation> reservations = reservationRepository.findByRestaurantIdAndDateAndTimeSlotId(
+            restaurantId,
+            date,
+            timeSlotId
+        );
+
+        Set<Long> reservedTableIds = reservations.stream()
+            .map(r -> r.getRestaurantTable().getId())
+            .collect(Collectors.toSet());
+
+        List<RestaurantTable> availableTables = restaurantTables.stream()
+            .filter(t -> isTableAvailable(t, outside, reservedTableIds))
+            .collect(Collectors.toList());
+
+        return RestaurantTableDTO.fromEntity(availableTables);
+    }
+
+    private boolean isTableAvailable(RestaurantTable table, Boolean outside, Set<Long> reservedTableIds) {
+        return table.getOutside().equals(outside) && !reservedTableIds.contains(table.getId());
+    }
     @Transactional
     public RestaurantTable createTable(Long restaurantId, RestaurantTableDTO tableDTO, Business business) {
         if (business == null || business.getId() == null) {
@@ -79,38 +108,7 @@ public class RestaurantTableService {
         return restaurantService.getTables(restaurantId);
     }
     
-    @Transactional(readOnly = true) 
-    public List<RestaurantTableDTO> getAvailableTables(Long restaurantId, Long timeSlotId, LocalDate date, Boolean outside) {
-        // Get all tables for the restaurant
-        List<RestaurantTable> restaurantTables = restaurantService.getTables(restaurantId);
-        
-        // Get all reservations for the given date and time slot using repository directly
-        List<Reservation> reservations = reservationRepository.findByRestaurantIdAndDateAndTimeSlotId(
-            restaurantId, 
-            date, 
-            timeSlotId
-        );
-        
-        // Filter available tables
-        List<RestaurantTable> availableTables = restaurantTables.stream()
-            .filter(table -> {
-                // Check if table matches outside/inside preference
-                if (!table.getOutside().equals(outside)) {
-                    return false;
-                }
-                
-                // Check if table is not reserved
-                boolean isReserved = reservations.stream()
-                    .anyMatch(reservation -> 
-                        reservation.getRestaurantTable().getId().equals(table.getId())
-                    );
-                
-                return !isReserved;
-            })
-            .collect(Collectors.toList());
-        
-        return RestaurantTableDTO.fromEntity(availableTables);
-    }
+    
     
     @Transactional(readOnly = true)
     public RestaurantTable getTableById(Long tableId) {
@@ -149,6 +147,5 @@ public class RestaurantTableService {
                 throw new RelatedEntityException("No se puede eliminar la mesa porque tiene reservas asociadas.");
 
 
-    }
-}
+    }    }
 }

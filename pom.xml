@@ -28,6 +28,11 @@
     </scm>
     <properties>
         <java.version>17</java.version>
+                <!-- Sonar (prefer env vars / -D overrides; do not commit secrets) -->
+                <sonar.host.url>${env.SONAR_HOST_URL}</sonar.host.url>
+                <sonar.organization>${env.SONAR_ORGANIZATION}</sonar.organization>
+                <sonar.projectKey>${env.SONAR_PROJECT_KEY}</sonar.projectKey>
+                <sonar.token>${env.SONAR_TOKEN}</sonar.token>
     </properties>
     <dependencies>
         <dependency>
@@ -200,6 +205,45 @@
                 </resources>
             </build>
         </profile>
+
+        <!-- Coverage profile: enables JaCoCo XML report for Sonar -->
+        <profile>
+            <id>coverage</id>
+            <properties>
+                <!-- Default JaCoCo XML report location produced by jacoco:report -->
+                <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.8.7</version>
+                        <executions>
+                            <execution>
+                                <id>prepare-agent</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>report</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                                <configuration>
+                                    <formats>
+                                        <format>XML</format>
+                                    </formats>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
     <build>
@@ -212,6 +256,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                     <source>17</source>
